@@ -93,6 +93,28 @@ ztp mail apple-draft message.json --json
 ztp mail send message.json --smtp-profile work --confirm --json
 ```
 
+### ztp message — Native iMessage/SMS messaging
+
+```bash
+# Preview message
+ztp message preview message.json --json
+
+# Generate draft file
+ztp message draft message.json --output draft.json --json
+
+# Validate
+ztp message validate message.json --json
+
+# Open in Messages.app
+ztp message apple-draft message.json --json
+
+# Send (requires --confirm)
+ztp message send message.json --confirm --json
+
+# List templates
+ztp message templates --json
+```
+
 ## JSON Spec Examples
 
 ### Excel
@@ -207,6 +229,21 @@ Themes: `zyquo-light`, `zyquo-dark`, `finance-light`, `finance-dark`, `research-
 
 Body types: `plain`, `html`, `markdown` (auto-converted to styled HTML)
 
+### Message
+
+```json
+{
+  "version": "ztp-message/0.1",
+  "message": {
+    "channel": "imessage",
+    "to": [{ "name": "Alex", "address": "+14185551234" }],
+    "body": { "type": "plain", "content": "Confirmation pour demain à 10h." }
+  }
+}
+```
+
+Channels: `imessage`, `sms` (via Messages.app). Built-in templates with `{{variable}}` substitution.
+
 ## Agent-Ready JSON Output
 
 Every command supports `--json` for structured machine-readable output:
@@ -238,8 +275,9 @@ ztp/
 │   ├── ZTPDocx/         DOCX generation (OpenXML + ZIP)
 │   ├── ZTPSlides/       PPTX generation (OpenXML + ZIP)
 │   ├── ZTPChart/        Chart rendering (CoreGraphics + SVG)
-│   └── ZTPMail/         Email drafting, rendering, SMTP
-├── Tests/               155 tests across 32 suites
+│   ├── ZTPMail/         Email drafting, rendering, SMTP
+│   └── ZTPMessage/      iMessage/SMS via Messages.app
+├── Tests/               177 tests across 38 suites
 └── Examples/            JSON spec examples
 ```
 
@@ -249,11 +287,11 @@ ztp/
 |---|---|
 | Language | Swift 6 |
 | Platform | macOS 14+ / Apple Silicon |
-| Binary size | 5.7 MB |
+| Binary size | 6.1 MB |
 | Dependencies | swift-argument-parser only |
-| Source files | 155 |
-| Lines of code | ~21,000 |
-| Tests | 155 |
+| Source files | 168 |
+| Lines of code | ~23,000 |
+| Tests | 177 |
 | Startup | < 10 ms |
 
 ## Runtime Commands
