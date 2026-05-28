@@ -16,6 +16,7 @@ struct ZTP: ParsableCommand {
             VersionCommand.self,
             ExcelCommand.self,
             DocxCommand.self,
+            SlidesCommand.self,
         ],
         defaultSubcommand: VersionCommand.self
     )
