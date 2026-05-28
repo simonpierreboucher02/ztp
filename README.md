@@ -71,6 +71,28 @@ ztp chart themes --json
 ztp chart validate-spec chart.json --json
 ```
 
+### ztp mail — Native email drafting and sending
+
+```bash
+# Generate .eml draft (default safe mode)
+ztp mail draft message.json --output message.eml --json
+
+# Preview as HTML
+ztp mail preview message.json --output preview.html --json
+
+# Validate email spec
+ztp mail validate message.json --json
+
+# Inspect .eml file
+ztp mail inspect message.eml --json
+
+# Create draft in Apple Mail
+ztp mail apple-draft message.json --json
+
+# Send via SMTP (requires --confirm)
+ztp mail send message.json --smtp-profile work --confirm --json
+```
+
 ## JSON Spec Examples
 
 ### Excel
@@ -164,6 +186,27 @@ Export formats: `png` (2x Retina), `svg`, `pdf` (vector)
 
 Themes: `zyquo-light`, `zyquo-dark`, `finance-light`, `finance-dark`, `research-paper`, `minimal`, `terminal`
 
+### Email
+
+```json
+{
+  "version": "ztp-mail/0.1",
+  "message": {
+    "from": "agent@zyquo.dev",
+    "to": ["client@example.com"],
+    "subject": "Quarterly Report",
+    "body": {
+      "type": "markdown",
+      "content": "Bonjour,\n\n## Points clés\n\n- Revenue **+12%**\n- Margins improved\n\nCordialement,"
+    },
+    "attachments": [{ "path": "report.xlsx", "name": "Q4_Report.xlsx" }],
+    "signature": "-- \nZyquo AI Agent"
+  }
+}
+```
+
+Body types: `plain`, `html`, `markdown` (auto-converted to styled HTML)
+
 ## Agent-Ready JSON Output
 
 Every command supports `--json` for structured machine-readable output:
@@ -194,8 +237,9 @@ ztp/
 │   ├── ZTPExcel/        XLSX generation (OpenXML + ZIP)
 │   ├── ZTPDocx/         DOCX generation (OpenXML + ZIP)
 │   ├── ZTPSlides/       PPTX generation (OpenXML + ZIP)
-│   └── ZTPChart/        Chart rendering (CoreGraphics + SVG)
-├── Tests/               131 tests across 26 suites
+│   ├── ZTPChart/        Chart rendering (CoreGraphics + SVG)
+│   └── ZTPMail/         Email drafting, rendering, SMTP
+├── Tests/               155 tests across 32 suites
 └── Examples/            JSON spec examples
 ```
 
@@ -205,11 +249,11 @@ ztp/
 |---|---|
 | Language | Swift 6 |
 | Platform | macOS 14+ / Apple Silicon |
-| Binary size | 5.1 MB |
+| Binary size | 5.7 MB |
 | Dependencies | swift-argument-parser only |
-| Source files | 131 |
-| Lines of code | ~18,000 |
-| Tests | 131 |
+| Source files | 155 |
+| Lines of code | ~21,000 |
+| Tests | 155 |
 | Startup | < 10 ms |
 
 ## Runtime Commands
