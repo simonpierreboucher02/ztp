@@ -115,6 +115,28 @@ ztp message send message.json --confirm --json
 ztp message templates --json
 ```
 
+### ztp browser — Native browser automation (WebKit + Safari)
+
+```bash
+# Capture screenshot (WebKit, 2x Retina PNG)
+ztp browser screenshot https://example.com --output page.png --json
+
+# Export PDF
+ztp browser pdf https://example.com --output page.pdf --json
+
+# Extract content (HTTP-based, fast)
+ztp browser text https://example.com --json
+ztp browser links https://example.com --json
+ztp browser metadata https://example.com --json
+ztp browser html https://example.com --output page.html --json
+ztp browser inspect https://example.com --json
+
+# Safari bridge
+ztp browser open https://example.com --json
+ztp browser safari current-url --json
+ztp browser safari title --json
+```
+
 ## JSON Spec Examples
 
 ### Excel
@@ -276,8 +298,9 @@ ztp/
 │   ├── ZTPSlides/       PPTX generation (OpenXML + ZIP)
 │   ├── ZTPChart/        Chart rendering (CoreGraphics + SVG)
 │   ├── ZTPMail/         Email drafting, rendering, SMTP
-│   └── ZTPMessage/      iMessage/SMS via Messages.app
-├── Tests/               177 tests across 38 suites
+│   ├── ZTPMessage/      iMessage/SMS via Messages.app
+│   └── ZTPBrowser/      WebKit screenshots, PDF, extraction
+├── Tests/               200 tests across 44 suites
 └── Examples/            JSON spec examples
 ```
 
@@ -287,11 +310,11 @@ ztp/
 |---|---|
 | Language | Swift 6 |
 | Platform | macOS 14+ / Apple Silicon |
-| Binary size | 6.1 MB |
+| Binary size | 6.8 MB |
 | Dependencies | swift-argument-parser only |
-| Source files | 168 |
-| Lines of code | ~23,000 |
-| Tests | 177 |
+| Source files | 183 |
+| Lines of code | ~25,000 |
+| Tests | 200 |
 | Startup | < 10 ms |
 
 ## Runtime Commands
