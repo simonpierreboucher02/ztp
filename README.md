@@ -137,6 +137,43 @@ ztp browser safari current-url --json
 ztp browser safari title --json
 ```
 
+### ztp macos — Native macOS system automation
+
+```bash
+# System information
+ztp macos system info --json
+ztp macos system disks --json
+ztp macos system battery --json
+
+# Finder & files
+ztp macos finder reveal ~/Documents/report.xlsx --json
+ztp macos finder list ~/Desktop --json
+ztp macos files read ~/notes.txt --json
+ztp macos files copy a.txt b.txt --json
+
+# Clipboard & notifications
+ztp macos clipboard get --json
+ztp macos clipboard set "Hello" --json
+ztp macos notify "Build completed" --json
+
+# Screenshots
+ztp macos screenshot full --output screen.png --json
+ztp macos screenshot window Safari --output safari.png --json
+
+# Apps & processes
+ztp macos apps open Safari --json
+ztp macos apps running --json
+ztp macos processes list --json
+
+# AppleScript & Shortcuts
+ztp macos applescript eval "..." --confirm --json
+ztp macos shortcuts list --json
+ztp macos shortcuts run "Morning Routine" --confirm --json
+
+# Permissions
+ztp macos permissions check --json
+```
+
 ## JSON Spec Examples
 
 ### Excel
@@ -299,8 +336,9 @@ ztp/
 │   ├── ZTPChart/        Chart rendering (CoreGraphics + SVG)
 │   ├── ZTPMail/         Email drafting, rendering, SMTP
 │   ├── ZTPMessage/      iMessage/SMS via Messages.app
-│   └── ZTPBrowser/      WebKit screenshots, PDF, extraction
-├── Tests/               200 tests across 44 suites
+│   ├── ZTPBrowser/      WebKit screenshots, PDF, extraction
+│   └── ZTPMacOS/        System, Finder, clipboard, apps, AppleScript
+├── Tests/               210 tests across 45 suites
 └── Examples/            JSON spec examples
 ```
 
@@ -310,11 +348,11 @@ ztp/
 |---|---|
 | Language | Swift 6 |
 | Platform | macOS 14+ / Apple Silicon |
-| Binary size | 6.8 MB |
+| Binary size | 7.7 MB |
 | Dependencies | swift-argument-parser only |
-| Source files | 183 |
-| Lines of code | ~25,000 |
-| Tests | 200 |
+| Source files | 197 |
+| Lines of code | ~28,000 |
+| Tests | 210 |
 | Startup | < 10 ms |
 
 ## Runtime Commands
