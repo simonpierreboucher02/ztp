@@ -1,0 +1,17 @@
+{
+  "version": "ztp-browser/0.1",
+  "task": {
+    "action": "screenshot",
+    "url": "https://example.com",
+    "wait": {
+      "strategy": "dom-ready",
+      "timeout_ms": 8000
+    },
+    "viewport": {
+      "width": 1440,
+      "height": 900,
+      "scale": 2
+    },
+    "output": "example.png"
+  }
+}

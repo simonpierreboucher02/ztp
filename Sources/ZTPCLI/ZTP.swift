@@ -1,7 +1,7 @@
 import ArgumentParser
 
 @main
-struct ZTP: ParsableCommand {
+struct ZTP: AsyncParsableCommand {
     static let configuration = CommandConfiguration(
         commandName: "ztp",
         abstract: "Zyquo Tool Protocol — Native Agent Runtime",
@@ -20,6 +20,7 @@ struct ZTP: ParsableCommand {
             ChartCommand.self,
             MailCommand.self,
             MessageCommand.self,
+            BrowserCommand.self,
         ],
         defaultSubcommand: VersionCommand.self
     )
