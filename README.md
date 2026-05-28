@@ -1,6 +1,6 @@
 # ZTP — Zyquo Tool Protocol
 
-Native agent runtime infrastructure for macOS. Generate Excel, Word, and PowerPoint files from JSON specs — no Python, no LibreOffice, no Microsoft Office required.
+Native agent runtime infrastructure for macOS. Generate Excel, Word, PowerPoint, and charts from JSON specs — no Python, no LibreOffice, no Microsoft Office required.
 
 Built in Swift 6. Apple Silicon first. Apple notarized.
 
@@ -54,6 +54,21 @@ ztp slides outline deck.pptx --json
 ztp slides preview deck.pptx --json
 ztp slides text deck.pptx --json
 ztp slides validate deck.pptx --json
+```
+
+### ztp chart — Native chart generation
+
+```bash
+# Build charts in PNG, SVG, or PDF
+ztp chart build chart.json --output chart.png --format png --json
+ztp chart build chart.json --output chart.svg --format svg --json
+ztp chart build chart.json --output chart.pdf --format pdf --json
+
+# Inspect spec, summarize data, list themes
+ztp chart inspect chart.json --json
+ztp chart data-summary chart.json --json
+ztp chart themes --json
+ztp chart validate-spec chart.json --json
 ```
 
 ## JSON Spec Examples
@@ -122,6 +137,33 @@ ztp slides validate deck.pptx --json
 }
 ```
 
+### Chart
+
+```json
+{
+  "version": "ztp-chart/0.1",
+  "chart": { "type": "line", "title": "Revenue Growth", "width": 1200, "height": 700, "theme": "zyquo-light" },
+  "data": {
+    "values": [
+      { "year": 2020, "revenue": 100000 },
+      { "year": 2021, "revenue": 120000 },
+      { "year": 2022, "revenue": 150000 }
+    ]
+  },
+  "x": { "field": "year", "label": "Year" },
+  "y": { "label": "Revenue ($)" },
+  "series": [{ "field": "revenue", "label": "Revenue" }],
+  "legend": true,
+  "grid": true
+}
+```
+
+Supported chart types: `line`, `bar`, `scatter`, `area`, `pie`, `heatmap`, `candlestick`
+
+Export formats: `png` (2x Retina), `svg`, `pdf` (vector)
+
+Themes: `zyquo-light`, `zyquo-dark`, `finance-light`, `finance-dark`, `research-paper`, `minimal`, `terminal`
+
 ## Agent-Ready JSON Output
 
 Every command supports `--json` for structured machine-readable output:
@@ -151,8 +193,9 @@ ztp/
 │   ├── ZTPProtocols/    Tool protocol, manifests, contracts
 │   ├── ZTPExcel/        XLSX generation (OpenXML + ZIP)
 │   ├── ZTPDocx/         DOCX generation (OpenXML + ZIP)
-│   └── ZTPSlides/       PPTX generation (OpenXML + ZIP)
-├── Tests/               110 tests across 23 suites
+│   ├── ZTPSlides/       PPTX generation (OpenXML + ZIP)
+│   └── ZTPChart/        Chart rendering (CoreGraphics + SVG)
+├── Tests/               131 tests across 26 suites
 └── Examples/            JSON spec examples
 ```
 
@@ -162,11 +205,11 @@ ztp/
 |---|---|
 | Language | Swift 6 |
 | Platform | macOS 14+ / Apple Silicon |
-| Binary size | 4.3 MB |
+| Binary size | 5.1 MB |
 | Dependencies | swift-argument-parser only |
-| Source files | 101 |
-| Lines of code | ~12,700 |
-| Tests | 110 |
+| Source files | 131 |
+| Lines of code | ~18,000 |
+| Tests | 131 |
 | Startup | < 10 ms |
 
 ## Runtime Commands
