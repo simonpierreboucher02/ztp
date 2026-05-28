@@ -15,6 +15,7 @@ let package = Package(
         .library(name: "ZTPDocx", targets: ["ZTPDocx"]),
         .library(name: "ZTPSlides", targets: ["ZTPSlides"]),
         .library(name: "ZTPChart", targets: ["ZTPChart"]),
+        .library(name: "ZTPMail", targets: ["ZTPMail"]),
     ],
     dependencies: [
         .package(url: "https://github.com/apple/swift-argument-parser.git", from: "1.5.0"),
@@ -29,7 +30,15 @@ let package = Package(
                 "ZTPDocx",
                 "ZTPSlides",
                 "ZTPChart",
+                "ZTPMail",
                 .product(name: "ArgumentParser", package: "swift-argument-parser"),
+            ]
+        ),
+        .target(
+            name: "ZTPMail",
+            dependencies: [
+                "ZTPCore",
+                "ZTPProtocols",
             ]
         ),
         .target(
@@ -68,6 +77,10 @@ let package = Package(
         ),
         .target(
             name: "ZTPProtocols"
+        ),
+        .testTarget(
+            name: "ZTPMailTests",
+            dependencies: ["ZTPMail"]
         ),
         .testTarget(
             name: "ZTPChartTests",

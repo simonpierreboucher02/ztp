@@ -1,0 +1,13 @@
+{
+  "version": "ztp-mail/0.1",
+  "message": {
+    "from": "agent@zyquo.dev",
+    "to": ["client@example.com"],
+    "subject": "Quarterly Report — Q4 2026",
+    "body": {
+      "type": "markdown",
+      "content": "Bonjour,\n\nVoici le rapport trimestriel Q4 2026.\n\n## Points clés\n\n- Revenue en hausse de **12%**\n- Marges améliorées de 6 points\n- Rétention client à **94%**\n\n## Prochaines étapes\n\n1. Expansion du tier Enterprise\n2. Lancement APAC Q1 2027\n3. Consolidation des contrats fournisseurs\n\nCordialement,\n\n*L'équipe Zyquo*"
+    },
+    "signature": "-- \nZyquo AI Agent\nhttps://zyquo.dev"
+  }
+}
