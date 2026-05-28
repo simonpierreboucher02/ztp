@@ -21,6 +21,7 @@ struct ZTP: AsyncParsableCommand {
             MailCommand.self,
             MessageCommand.self,
             BrowserCommand.self,
+            MacOSCommand.self,
         ],
         defaultSubcommand: VersionCommand.self
     )
