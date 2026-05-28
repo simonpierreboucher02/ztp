@@ -3,7 +3,7 @@ set -euo pipefail
 
 APP_NAME="ztp"
 BUNDLE_ID="dev.zyquo.ztp"
-VERSION="0.4.0"
+VERSION="0.5.0"
 IDENTITY="Developer ID Application: Simon-Pierre Boucher (3YM54G49SN)"
 KEYCHAIN_PROFILE="MacLustr-Notarize"
 ENTITLEMENTS="Entitlements/ZTP.entitlements"

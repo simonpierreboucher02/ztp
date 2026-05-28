@@ -1,0 +1,16 @@
+{
+  "version": "ztp-message/0.1",
+  "message": {
+    "channel": "imessage",
+    "to": [
+      {
+        "name": "Alex",
+        "address": "+14185551234"
+      }
+    ],
+    "body": {
+      "type": "plain",
+      "content": "Salut Alex, je voulais juste confirmer notre rencontre demain à 10h. À bientôt!"
+    }
+  }
+}

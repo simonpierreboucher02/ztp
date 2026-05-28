@@ -19,6 +19,7 @@ struct ZTP: ParsableCommand {
             SlidesCommand.self,
             ChartCommand.self,
             MailCommand.self,
+            MessageCommand.self,
         ],
         defaultSubcommand: VersionCommand.self
     )

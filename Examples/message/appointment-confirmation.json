@@ -1,0 +1,14 @@
+{
+  "version": "ztp-message/0.1",
+  "message": {
+    "channel": "imessage",
+    "to": [{ "name": "Alex", "address": "+14185551234" }],
+    "body": { "type": "plain", "content": "" },
+    "template": "appointment-confirmation",
+    "variables": {
+      "name": "Alex",
+      "date": "mercredi 28 mai",
+      "time": "10h00"
+    }
+  }
+}
