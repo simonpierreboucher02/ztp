@@ -1,0 +1,41 @@
+{
+  "version": "ztp-excel/0.1",
+  "workbook": {
+    "title": "Formula Examples"
+  },
+  "sheets": [
+    {
+      "name": "Formulas",
+      "cells": [
+        { "address": "A1", "value": "Value A", "style": "header" },
+        { "address": "B1", "value": "Value B", "style": "header" },
+        { "address": "C1", "value": "Sum", "style": "header" },
+        { "address": "D1", "value": "Average", "style": "header" },
+        { "address": "A2", "value": 10 },
+        { "address": "B2", "value": 20 },
+        { "address": "A3", "value": 30 },
+        { "address": "B3", "value": 40 },
+        { "address": "A4", "value": 50 },
+        { "address": "B4", "value": 60 },
+        { "address": "C2", "formula": "SUM(A2:B2)" },
+        { "address": "C3", "formula": "SUM(A3:B3)" },
+        { "address": "C4", "formula": "SUM(A4:B4)" },
+        { "address": "D2", "formula": "AVERAGE(A2:B2)" },
+        { "address": "D3", "formula": "AVERAGE(A3:B3)" },
+        { "address": "D4", "formula": "AVERAGE(A4:B4)" },
+        { "address": "A6", "value": "Total", "style": "header" },
+        { "address": "A7", "formula": "SUM(A2:A4)" },
+        { "address": "B7", "formula": "SUM(B2:B4)" },
+        { "address": "C7", "formula": "SUM(C2:C4)" },
+        { "address": "A9", "value": "Conditional", "style": "header" },
+        { "address": "A10", "formula": "IF(A7>B7,\"A wins\",\"B wins\")" }
+      ]
+    }
+  ],
+  "styles": {
+    "header": {
+      "font": { "bold": true, "size": 11 },
+      "fill": { "color": "D9EAF7" }
+    }
+  }
+}

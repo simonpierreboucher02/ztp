@@ -1,0 +1,41 @@
+{
+  "version": "ztp-excel/0.1",
+  "workbook": {
+    "title": "Q4 2025 Financial Report",
+    "author": "Finance Team"
+  },
+  "sheets": [
+    {
+      "name": "Summary",
+      "cells": [
+        { "address": "A1", "value": "Metric", "style": "header" },
+        { "address": "B1", "value": "Q3 2025", "style": "header" },
+        { "address": "C1", "value": "Q4 2025", "style": "header" },
+        { "address": "D1", "value": "Change", "style": "header" },
+        { "address": "A2", "value": "Revenue" },
+        { "address": "B2", "value": 2450000, "format": "currency" },
+        { "address": "C2", "value": 2890000, "format": "currency" },
+        { "address": "D2", "formula": "(C2-B2)/B2", "format": "percentage" },
+        { "address": "A3", "value": "Expenses" },
+        { "address": "B3", "value": 1800000, "format": "currency" },
+        { "address": "C3", "value": 1950000, "format": "currency" },
+        { "address": "D3", "formula": "(C3-B3)/B3", "format": "percentage" },
+        { "address": "A4", "value": "Net Income", "style": "total" },
+        { "address": "B4", "formula": "B2-B3", "format": "currency", "style": "total" },
+        { "address": "C4", "formula": "C2-C3", "format": "currency", "style": "total" },
+        { "address": "D4", "formula": "(C4-B4)/B4", "format": "percentage", "style": "total" }
+      ]
+    }
+  ],
+  "styles": {
+    "header": {
+      "font": { "bold": true, "size": 11, "color": "FFFFFF" },
+      "fill": { "color": "2F5496" },
+      "alignment": { "horizontal": "center" }
+    },
+    "total": {
+      "font": { "bold": true, "size": 11 },
+      "fill": { "color": "E2EFDA" }
+    }
+  }
+}

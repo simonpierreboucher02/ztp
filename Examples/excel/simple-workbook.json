@@ -1,0 +1,38 @@
+{
+  "version": "ztp-excel/0.1",
+  "workbook": {
+    "title": "Financial Report",
+    "author": "Zyquo"
+  },
+  "sheets": [
+    {
+      "name": "Revenue",
+      "cells": [
+        { "address": "A1", "value": "Year", "style": "header" },
+        { "address": "B1", "value": "Revenue", "style": "header" },
+        { "address": "C1", "value": "Growth", "style": "header" },
+        { "address": "A2", "value": 2023 },
+        { "address": "B2", "value": 125000, "format": "currency" },
+        { "address": "A3", "value": 2024 },
+        { "address": "B3", "value": 150000, "format": "currency" },
+        { "address": "C3", "formula": "B3/B2-1", "format": "percentage" },
+        { "address": "A4", "value": 2025 },
+        { "address": "B4", "formula": "B3*1.10", "format": "currency" },
+        { "address": "C4", "formula": "B4/B3-1", "format": "percentage" },
+        { "address": "A6", "value": "Total", "style": "header" },
+        { "address": "B6", "formula": "SUM(B2:B4)", "format": "currency" }
+      ]
+    }
+  ],
+  "styles": {
+    "header": {
+      "font": {
+        "bold": true,
+        "size": 12
+      },
+      "fill": {
+        "color": "D9EAF7"
+      }
+    }
+  }
+}
