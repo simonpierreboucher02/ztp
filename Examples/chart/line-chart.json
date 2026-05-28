@@ -1,0 +1,29 @@
+{
+  "version": "ztp-chart/0.1",
+  "chart": {
+    "type": "line",
+    "title": "Revenue Growth",
+    "subtitle": "Annual revenue from 2020 to 2025",
+    "width": 1200,
+    "height": 700,
+    "theme": "zyquo-light"
+  },
+  "data": {
+    "values": [
+      { "year": 2020, "revenue": 100000, "costs": 80000 },
+      { "year": 2021, "revenue": 120000, "costs": 90000 },
+      { "year": 2022, "revenue": 135000, "costs": 95000 },
+      { "year": 2023, "revenue": 150000, "costs": 100000 },
+      { "year": 2024, "revenue": 180000, "costs": 110000 },
+      { "year": 2025, "revenue": 210000, "costs": 120000 }
+    ]
+  },
+  "x": { "field": "year", "label": "Year" },
+  "y": { "label": "Amount ($)" },
+  "series": [
+    { "field": "revenue", "label": "Revenue" },
+    { "field": "costs", "label": "Costs" }
+  ],
+  "legend": true,
+  "grid": true
+}

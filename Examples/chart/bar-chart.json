@@ -1,0 +1,22 @@
+{
+  "version": "ztp-chart/0.1",
+  "chart": {
+    "type": "bar",
+    "title": "Sales by Region",
+    "width": 1000,
+    "height": 600,
+    "theme": "zyquo-light"
+  },
+  "data": {
+    "values": [
+      { "region": "North America", "sales": 450000 },
+      { "region": "Europe", "sales": 380000 },
+      { "region": "Asia Pacific", "sales": 290000 },
+      { "region": "Latin America", "sales": 120000 }
+    ]
+  },
+  "x": { "field": "region", "label": "Region" },
+  "y": { "label": "Sales ($)" },
+  "series": [{ "field": "sales", "label": "Sales" }],
+  "grid": true
+}
