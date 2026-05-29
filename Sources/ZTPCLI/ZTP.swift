@@ -5,7 +5,7 @@ struct ZTP: AsyncParsableCommand {
     static let configuration = CommandConfiguration(
         commandName: "ztp",
         abstract: "Zyquo Tool Protocol — Native Agent Runtime",
-        version: "0.1.0",
+        version: "0.9.0",
         subcommands: [
             ToolsCommand.self,
             RunCommand.self,
@@ -22,6 +22,10 @@ struct ZTP: AsyncParsableCommand {
             MessageCommand.self,
             BrowserCommand.self,
             MacOSCommand.self,
+            OCRCommand.self,
+            NotesCommand.self,
+            FilesCommand.self,
+            FinderCommand.self,
         ],
         defaultSubcommand: VersionCommand.self
     )

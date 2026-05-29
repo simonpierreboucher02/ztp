@@ -48,13 +48,14 @@ struct RuntimeCLITests {
 
     // MARK: - tools
 
-    @Test("ztp tools --json lists all 8 built-in tools")
+    @Test("ztp tools --json lists all 12 built-in tools")
     func toolsList() throws {
         guard requireBinary() else { Issue.record("binary missing"); return }
         let r = try run(["tools", "--json"])
         #expect(r.status == 0)
-        #expect(r.out.contains("\"count\" : 8"))
-        for name in ["ztp-excel", "ztp-docx", "ztp-slides", "ztp-chart", "ztp-mail", "ztp-message", "ztp-browser", "ztp-macos"] {
+        #expect(r.out.contains("\"count\" : 12"))
+        for name in ["ztp-excel", "ztp-docx", "ztp-slides", "ztp-chart", "ztp-mail", "ztp-message", "ztp-browser", "ztp-macos",
+                     "ztp-ocr", "ztp-notes", "ztp-files", "ztp-finder"] {
             #expect(r.out.contains(name), "tools should include \(name)")
         }
     }

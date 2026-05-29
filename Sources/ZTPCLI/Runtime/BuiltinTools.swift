@@ -9,6 +9,10 @@ import ZTPMail
 import ZTPMessage
 import ZTPBrowser
 import ZTPMacOS
+import ZTPOCR
+import ZTPNotes
+import ZTPFiles
+import ZTPFinder
 
 /// Central registry of the built-in ZTP tools. This is what makes the
 /// `ztp run / tools / schema / inspect / validate` commands work: every tool
@@ -26,6 +30,10 @@ public enum BuiltinTools {
             ZTPMessageTool(),
             ZTPBrowserTool(),
             ZTPMacOSTool(),
+            ZTPOCRTool(),
+            ZTPNotesTool(),
+            ZTPFilesTool(),
+            ZTPFinderTool(),
         ]
     }
 

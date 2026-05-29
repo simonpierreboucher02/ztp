@@ -7,13 +7,13 @@
 ![Platform](https://img.shields.io/badge/platform-macOS%2014%2B-black?logo=apple)
 ![Swift](https://img.shields.io/badge/Swift-6.0-F05138?logo=swift&logoColor=white)
 ![Arch](https://img.shields.io/badge/arch-arm64%20%C2%B7%20x86__64-blue)
-![Version](https://img.shields.io/badge/version-0.8.0-2F80ED)
+![Version](https://img.shields.io/badge/version-0.9.0-2F80ED)
 ![License](https://img.shields.io/badge/license-Apache--2.0-green)
 ![Notarized](https://img.shields.io/badge/notarized-Developer%20ID-success?logo=apple)
 
-![Tools](https://img.shields.io/badge/tools-8-9D7CFF)
-![Tests](https://img.shields.io/badge/tests-257%20passing-4ADE80)
-![Source](https://img.shields.io/badge/source-202%20files%20%C2%B7%20~28k%20LOC-7A8693)
+![Tools](https://img.shields.io/badge/tools-12-9D7CFF)
+![Tests](https://img.shields.io/badge/tests-278%20passing-4ADE80)
+![Source](https://img.shields.io/badge/source-264%20files%20%C2%B7%20~34k%20LOC-7A8693)
 ![Dependencies](https://img.shields.io/badge/deps-swift--argument--parser%20only-F59E0B)
 ![Protocol](https://img.shields.io/badge/protocol-ztp%2F1-5BA8FF)
 
@@ -56,9 +56,9 @@ ZTP is the **execution layer** behind the [Zyquo](https://github.com/simonpierre
 ### Homebrew
 
 ```bash
-brew install simonpierreboucher02/tap/ztp
-# or, from the release tarball committed in this repo:
-tar xzf ztp-0.8.0-macos-arm64.tar.gz && sudo mv ztp /usr/local/bin/
+brew install simonpierreboucher02/ztp/ztp
+# or, from the notarized release tarball (GitHub Releases):
+tar xzf ztp-0.9.0-macos-arm64.tar.gz && sudo mv ztp /usr/local/bin/
 ```
 
 ### From source
@@ -391,6 +391,90 @@ ztp macos screenshot-full --output screen.png
 
 ---
 
+### 🔎 ztp-ocr
+
+![caps](https://img.shields.io/badge/Vision%20%C2%B7%20PDFKit-on--device-5EEAD4) ![feat](https://img.shields.io/badge/no%20network-4ADE80)
+
+Local, on-device OCR via Apple's Vision framework — images, scanned PDFs, and live screen captures. No cloud, no network.
+
+**Commands:** `image` · `pdf` · `screen` · `languages`
+
+- `pdf` rasterizes each page (configurable DPI) then recognizes text; supports page ranges (`1-3`, `1,2,5`)
+- `--languages en,fr` constrains recognition; `--fast` trades accuracy for speed
+- Returns full text plus per-line confidence and bounding boxes; optional `--output` writes the text to a file
+
+```bash
+ztp ocr image scan.png --json
+ztp ocr pdf invoice.pdf --pages 1-2 --dpi 200 --output invoice.txt
+ztp ocr screen --json
+ztp ocr languages
+```
+
+---
+
+### 🗒️ ztp-notes
+
+![caps](https://img.shields.io/badge/Apple%20Notes-AppleScript-FBBF24) ![feat](https://img.shields.io/badge/safe%20escaping%20%C2%B7%20--confirm%20gating-2F80ED)
+
+Read and write Apple Notes, including structured note creation.
+
+**Commands:** `list` · `read` · `create` · `append` · `delete` · `folders`
+
+- `create` accepts plain text or HTML; the title becomes the note's first line
+- `read` returns both raw HTML and a plain-text reduction
+- `delete` (to Recently Deleted) requires `--confirm`
+
+```bash
+ztp notes list --folder Notes --json
+ztp notes create --title "Standup" --body "- shipped OCR\n- next: finder" --json
+ztp notes append --name "Standup" --body "- reviewed PRs"
+ztp notes read --name "Standup" --json
+```
+
+---
+
+### 🗂️ ztp-files
+
+![caps](https://img.shields.io/badge/FileManager%20%C2%B7%20ditto-no%20shell-5EEAD4) ![feat](https://img.shields.io/badge/Trash--safe%20delete%20%C2%B7%20--confirm%20gating-2F80ED)
+
+Filesystem navigation, search, mutation and (de)compression — pure Foundation plus `/usr/bin/ditto` for zip (no shell).
+
+**Commands:** `list` · `tree` · `search` · `info` · `copy` · `move` · `rename` · `mkdir` · `delete` · `compress` · `extract`
+
+- `search` matches by name or, with `--content`, greps file contents; supports `--regex` and `--ext`
+- `delete` moves to the Trash by default (recoverable); `--permanent` removes outright; both require `--confirm`
+- `move` / `rename` / `extract` require `--confirm`
+
+```bash
+ztp files list --path ~/Documents --sort date --json
+ztp files search --path ~/src --query "TODO" --content --ext swift --json
+ztp files compress --path ~/Project --output ~/project.zip
+ztp files delete --path ~/old.txt --confirm
+```
+
+---
+
+### 🪟 ztp-finder
+
+![caps](https://img.shields.io/badge/Finder-AppleScript-FBBF24) ![feat](https://img.shields.io/badge/safe%20escaping%20%C2%B7%20--confirm%20gating-2F80ED)
+
+Advanced Finder control via AppleScript.
+
+**Commands:** `selection` · `reveal` · `open` · `new-window` · `set-view` · `info` · `trash` · `empty-trash` · `eject`
+
+- `set-view` switches the front window between `icon` / `list` / `column` / `gallery`
+- `selection` returns the POSIX paths of the items currently selected in Finder
+- `trash` / `empty-trash` / `eject` require `--confirm`
+
+```bash
+ztp finder selection --json
+ztp finder set-view --view column --path ~/Downloads
+ztp finder reveal --path ~/report.pdf
+ztp finder eject --name "Backup" --confirm
+```
+
+---
+
 ## Architecture
 
 ```text
@@ -398,7 +482,8 @@ ztp (ZTPCLI)
 ├── ZTPProtocols     ZTPTool, ToolManifest, ToolInput/Result, JSONValue
 ├── ZTPCore          ToolRegistry, ZTPRuntime (actor), EventBus, Logger, JSONOutput
 ├── ZTPExcel  ZTPDocx  ZTPSlides  ZTPChart      ← document & visual generators
-└── ZTPMail   ZTPMessage  ZTPBrowser  ZTPMacOS  ← comms, web & system
+├── ZTPMail   ZTPMessage  ZTPBrowser  ZTPMacOS  ← comms, web & system
+└── ZTPOCR    ZTPNotes    ZTPFiles    ZTPFinder ← OCR, Apple Notes, files & Finder
 ```
 
 Each generator owns its **Schema → Model → OpenXML/render → package** pipeline with a dedicated validator. The CLI exposes both per-tool subcommands and the generic protocol commands (`run`/`tools`/`schema`/`inspect`/`validate`).

@@ -19,6 +19,10 @@ let package = Package(
         .library(name: "ZTPMessage", targets: ["ZTPMessage"]),
         .library(name: "ZTPBrowser", targets: ["ZTPBrowser"]),
         .library(name: "ZTPMacOS", targets: ["ZTPMacOS"]),
+        .library(name: "ZTPOCR", targets: ["ZTPOCR"]),
+        .library(name: "ZTPNotes", targets: ["ZTPNotes"]),
+        .library(name: "ZTPFiles", targets: ["ZTPFiles"]),
+        .library(name: "ZTPFinder", targets: ["ZTPFinder"]),
     ],
     dependencies: [
         .package(url: "https://github.com/apple/swift-argument-parser.git", from: "1.5.0"),
@@ -37,7 +41,41 @@ let package = Package(
                 "ZTPMessage",
                 "ZTPBrowser",
                 "ZTPMacOS",
+                "ZTPOCR",
+                "ZTPNotes",
+                "ZTPFiles",
+                "ZTPFinder",
                 .product(name: "ArgumentParser", package: "swift-argument-parser"),
+            ]
+        ),
+        .target(
+            name: "ZTPOCR",
+            dependencies: [
+                "ZTPCore",
+                "ZTPProtocols",
+            ]
+        ),
+        .target(
+            name: "ZTPNotes",
+            dependencies: [
+                "ZTPCore",
+                "ZTPProtocols",
+                "ZTPMacOS",
+            ]
+        ),
+        .target(
+            name: "ZTPFiles",
+            dependencies: [
+                "ZTPCore",
+                "ZTPProtocols",
+            ]
+        ),
+        .target(
+            name: "ZTPFinder",
+            dependencies: [
+                "ZTPCore",
+                "ZTPProtocols",
+                "ZTPMacOS",
             ]
         ),
         .target(
@@ -108,6 +146,22 @@ let package = Package(
         .testTarget(
             name: "ZTPMacOSTests",
             dependencies: ["ZTPMacOS"]
+        ),
+        .testTarget(
+            name: "ZTPOCRTests",
+            dependencies: ["ZTPOCR"]
+        ),
+        .testTarget(
+            name: "ZTPNotesTests",
+            dependencies: ["ZTPNotes"]
+        ),
+        .testTarget(
+            name: "ZTPFilesTests",
+            dependencies: ["ZTPFiles"]
+        ),
+        .testTarget(
+            name: "ZTPFinderTests",
+            dependencies: ["ZTPFinder"]
         ),
         .testTarget(
             name: "ZTPBrowserTests",

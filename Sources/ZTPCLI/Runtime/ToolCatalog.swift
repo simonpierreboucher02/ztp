@@ -173,6 +173,82 @@ public enum ToolCatalog {
             CommandSpec("permissions-check", "Check macOS permissions", []),
         ])
 
+        let confirmFlag = ParamSpec("confirmed", "bool", required: true, "Must be true for mutating/dangerous ops")
+
+        d["ztp-ocr"] = ToolDoc(name: "ztp-ocr", summary: "Local on-device OCR for images, PDFs and screen captures (Vision)", commands: [
+            CommandSpec("image", "OCR an image file", [
+                ParamSpec("input", "path", required: true, "Image file path"),
+                ParamSpec("languages", "string", "Comma-separated languages, e.g. en,fr"),
+                ParamSpec("fast", "bool", "Faster, lower-accuracy recognition"),
+                ParamSpec("output", "path", "Write extracted text to this file"),
+            ]),
+            CommandSpec("pdf", "OCR a PDF (rasterizes each page)", [
+                ParamSpec("input", "path", required: true, "PDF file path"),
+                ParamSpec("pages", "string", "Page range, e.g. 1-3 or 1,2,5"),
+                ParamSpec("dpi", "int", "Rasterization DPI (default 200)"),
+                ParamSpec("languages", "string", "Comma-separated languages"),
+                ParamSpec("output", "path", "Write extracted text to this file"),
+            ]),
+            CommandSpec("screen", "Capture the screen and OCR it", [
+                ParamSpec("languages", "string", "Comma-separated languages"),
+                ParamSpec("output", "path", "Write extracted text to this file"),
+            ]),
+            CommandSpec("languages", "List supported recognition languages", []),
+        ])
+
+        d["ztp-notes"] = ToolDoc(name: "ztp-notes", summary: "Read and write Apple Notes", commands: [
+            CommandSpec("list", "List notes", [
+                ParamSpec("folder", "string", "Restrict to a folder"),
+                ParamSpec("limit", "int", "Max notes (default 50)"),
+            ]),
+            CommandSpec("read", "Read a note by title", [ParamSpec("name", "string", required: true, "Note title")]),
+            CommandSpec("create", "Create a note", [
+                ParamSpec("title", "string", required: true, "Note title"),
+                ParamSpec("body", "string", "Body text or HTML"),
+                ParamSpec("folder", "string", "Target folder"),
+            ]),
+            CommandSpec("append", "Append to a note", [
+                ParamSpec("name", "string", required: true, "Note title"),
+                ParamSpec("body", "string", required: true, "Text/HTML to append"),
+            ]),
+            CommandSpec("delete", "Delete a note (to Recently Deleted)", [
+                ParamSpec("name", "string", required: true, "Note title"), confirmFlag,
+            ]),
+            CommandSpec("folders", "List Notes folders", []),
+        ])
+
+        let fPath = ParamSpec("path", "path", required: true, "Target path")
+        d["ztp-files"] = ToolDoc(name: "ztp-files", summary: "File navigation, search, copy/move/rename and compression", commands: [
+            CommandSpec("list", "List a directory", [fPath, ParamSpec("sort", "string", "name|size|date"), ParamSpec("all", "bool", "Include hidden")]),
+            CommandSpec("tree", "Recursive tree", [fPath, ParamSpec("depth", "int", "Max depth (default 3)"), ParamSpec("max", "int", "Max entries"), ParamSpec("all", "bool", "Include hidden")]),
+            CommandSpec("search", "Search by name or content", [
+                fPath, ParamSpec("query", "string", required: true, "Substring or regex"),
+                ParamSpec("ext", "string", "Restrict to extension"), ParamSpec("max", "int", "Max results"),
+                ParamSpec("regex", "bool", "Treat query as regex"), ParamSpec("content", "bool", "Grep file contents"),
+                ParamSpec("all", "bool", "Include hidden"),
+            ]),
+            CommandSpec("info", "Stat a path", [fPath]),
+            CommandSpec("copy", "Copy a file/dir", [ParamSpec("from", "path", required: true, "Source"), ParamSpec("to", "path", required: true, "Destination")]),
+            CommandSpec("move", "Move a file/dir", [ParamSpec("from", "path", required: true, "Source"), ParamSpec("to", "path", required: true, "Destination"), confirmFlag]),
+            CommandSpec("rename", "Rename a file/dir", [fPath, ParamSpec("name", "string", required: true, "New name"), confirmFlag]),
+            CommandSpec("mkdir", "Create a directory", [fPath]),
+            CommandSpec("delete", "Delete (to Trash unless permanent)", [fPath, confirmFlag, ParamSpec("permanent", "bool", "Permanently delete")]),
+            CommandSpec("compress", "Zip a file/dir", [fPath, ParamSpec("output", "path", required: true, "Output .zip path")]),
+            CommandSpec("extract", "Unzip an archive", [ParamSpec("input", "path", required: true, ".zip path"), ParamSpec("to", "path", required: true, "Destination dir"), confirmFlag]),
+        ])
+
+        d["ztp-finder"] = ToolDoc(name: "ztp-finder", summary: "Advanced Finder control via AppleScript", commands: [
+            CommandSpec("selection", "Get selected items", []),
+            CommandSpec("reveal", "Reveal a path", [fPath]),
+            CommandSpec("open", "Open a folder/file", [fPath]),
+            CommandSpec("new-window", "Open a new Finder window", [ParamSpec("path", "path", "Optional path")]),
+            CommandSpec("set-view", "Set window view", [ParamSpec("view", "string", required: true, "icon|list|column|gallery"), ParamSpec("path", "path", "Optional path to open first")]),
+            CommandSpec("info", "Finder kind/size for a path", [fPath]),
+            CommandSpec("trash", "Move a path to Trash", [fPath, confirmFlag]),
+            CommandSpec("empty-trash", "Empty the Trash", [confirmFlag]),
+            CommandSpec("eject", "Eject a volume by name", [ParamSpec("name", "string", required: true, "Volume name"), confirmFlag]),
+        ])
+
         return d
     }()
 
