@@ -39,18 +39,26 @@ public actor ZTPRuntime {
             let elapsed = start.duration(to: .now)
             let ms = elapsed.components.seconds * 1000
                 + elapsed.components.attoseconds / 1_000_000_000_000_000
+            let duration = result.durationMs ?? ms
 
+            // Preserve the tool's actual outcome — a tool that returns a
+            // failure must NOT be reported as success. Only the duration and
+            // event emission are added by the runtime.
             await eventBus.emit(ToolEvent(
-                event: .done,
+                event: result.ok ? .done : .error,
                 tool: toolName,
                 traceID: context.traceID
             ))
 
-            return ToolResult.success(
-                tool: toolName,
-                durationMs: ms,
-                data: result.data ?? [:]
-            )
+            if result.ok {
+                return ToolResult.success(tool: toolName, durationMs: duration, data: result.data ?? [:])
+            } else {
+                return ToolResult.failure(
+                    tool: toolName,
+                    durationMs: duration,
+                    error: result.error ?? ToolErrorInfo(code: "TOOL_FAILED", message: "Tool reported failure")
+                )
+            }
         } catch {
             let elapsed = start.duration(to: .now)
             let ms = elapsed.components.seconds * 1000

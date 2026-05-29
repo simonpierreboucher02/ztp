@@ -16,19 +16,23 @@ public struct BrowserTask: Codable, Sendable {
     public let wait: WaitConfig?
     public let viewport: ViewportConfig?
     public let output: String?
+    /// Custom HTTP request headers (e.g. Authorization, Accept).
+    public let headers: [String: String]?
 
     public init(
         action: String,
         url: String,
         wait: WaitConfig? = nil,
         viewport: ViewportConfig? = nil,
-        output: String? = nil
+        output: String? = nil,
+        headers: [String: String]? = nil
     ) {
         self.action = action
         self.url = url
         self.wait = wait
         self.viewport = viewport
         self.output = output
+        self.headers = headers
     }
 }
 

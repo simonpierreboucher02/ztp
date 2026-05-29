@@ -61,11 +61,84 @@ public struct WorkbookMeta: Codable, Sendable {
 public struct SheetSpec: Codable, Sendable {
     public var name: String
     public var cells: [CellSpec]
+    /// Merged-cell ranges in A1 notation, e.g. ["A1:C1"].
+    public var merges: [String]?
+    /// Column-width directives.
+    public var columns: [ColumnSpec]?
+    /// Frozen panes.
+    public var freeze: FreezeSpec?
+    /// Data-validation rules (dropdowns / numeric ranges).
+    public var validations: [ValidationSpec]?
+    /// Conditional-format rules (data bars / color scales).
+    public var conditionalFormats: [ConditionalFormatSpec]?
+    /// Cell comments (notes).
+    public var comments: [CommentSpec]?
 
-    public init(name: String, cells: [CellSpec] = []) {
+    public init(
+        name: String,
+        cells: [CellSpec] = [],
+        merges: [String]? = nil,
+        columns: [ColumnSpec]? = nil,
+        freeze: FreezeSpec? = nil,
+        validations: [ValidationSpec]? = nil,
+        conditionalFormats: [ConditionalFormatSpec]? = nil,
+        comments: [CommentSpec]? = nil
+    ) {
         self.name = name
         self.cells = cells
+        self.merges = merges
+        self.columns = columns
+        self.freeze = freeze
+        self.validations = validations
+        self.conditionalFormats = conditionalFormats
+        self.comments = comments
     }
+
+    enum CodingKeys: String, CodingKey {
+        case name, cells, merges, columns, freeze, validations, comments
+        case conditionalFormats = "conditional_formats"
+    }
+}
+
+/// A conditional-format directive: `type: "data_bar"` (with `color`) or
+/// `"color_scale"` (with `colors`).
+public struct ConditionalFormatSpec: Codable, Sendable {
+    public var range: String
+    public var type: String?      // "data_bar" (default) | "color_scale"
+    public var color: String?
+    public var colors: [String]?
+}
+
+/// A cell-comment directive.
+public struct CommentSpec: Codable, Sendable {
+    public var ref: String
+    public var text: String
+    public var author: String?
+}
+
+/// A data-validation directive. For `type: "list"` provide `values`; for
+/// `"whole"`/`"decimal"` provide `min`/`max`.
+public struct ValidationSpec: Codable, Sendable {
+    public var range: String
+    public var type: String?         // "list" (default), "whole", "decimal"
+    public var values: [String]?
+    public var min: Double?
+    public var max: Double?
+}
+
+/// A column-width directive. Either `column` (a letter like "A") or a
+/// `min`/`max` 1-based range, plus a `width` in Excel character units.
+public struct ColumnSpec: Codable, Sendable {
+    public var column: String?
+    public var min: Int?
+    public var max: Int?
+    public var width: Double
+}
+
+/// Frozen-pane directive: freeze the top `rows` and/or left `columns`.
+public struct FreezeSpec: Codable, Sendable {
+    public var rows: Int?
+    public var columns: Int?
 }
 
 // MARK: - CellSpec
@@ -279,7 +352,76 @@ extension WorkbookSpec {
                 cells.append(cell)
             }
 
-            worksheets.append(Worksheet(name: sheetSpec.name, cells: cells))
+            // Column widths
+            var columnWidths: [ColumnWidth] = []
+            for col in sheetSpec.columns ?? [] {
+                let lo: Int
+                let hi: Int
+                if let letter = col.column {
+                    let n = CellAddress.columnNumber(from: letter.uppercased())
+                    lo = n; hi = n
+                } else {
+                    lo = col.min ?? 1
+                    hi = col.max ?? lo
+                }
+                if lo >= 1 && hi >= lo && col.width > 0 {
+                    columnWidths.append(ColumnWidth(min: lo, max: hi, width: col.width))
+                }
+            }
+
+            // Data validations
+            var validations: [DataValidation] = []
+            for v in sheetSpec.validations ?? [] {
+                let type = v.type ?? "list"
+                if type == "list" {
+                    let vals = (v.values ?? []).map { $0.replacingOccurrences(of: "\"", with: "") }
+                    guard !vals.isEmpty else { continue }
+                    validations.append(DataValidation(
+                        sqref: v.range, type: "list",
+                        formula1: "\"\(vals.joined(separator: ","))\""
+                    ))
+                } else {
+                    // numeric range (whole/decimal)
+                    let fmt: (Double) -> String = { $0 == $0.rounded() ? String(Int($0)) : String($0) }
+                    let lo = v.min.map(fmt) ?? "0"
+                    let hi = v.max.map(fmt)
+                    validations.append(DataValidation(
+                        sqref: v.range, type: type, formula1: lo, formula2: hi
+                    ))
+                }
+            }
+
+            // Conditional formats
+            var conditionalFormats: [ConditionalFormat] = []
+            for cf in sheetSpec.conditionalFormats ?? [] {
+                switch (cf.type ?? "data_bar") {
+                case "color_scale":
+                    conditionalFormats.append(ConditionalFormat(
+                        sqref: cf.range, kind: .colorScale, scaleColors: cf.colors
+                    ))
+                default:
+                    conditionalFormats.append(ConditionalFormat(
+                        sqref: cf.range, kind: .dataBar, barColor: cf.color
+                    ))
+                }
+            }
+
+            // Comments
+            let comments: [CellComment] = (sheetSpec.comments ?? []).map {
+                CellComment(ref: $0.ref, author: $0.author ?? "ZTP", text: $0.text)
+            }
+
+            worksheets.append(Worksheet(
+                name: sheetSpec.name,
+                cells: cells,
+                merges: sheetSpec.merges ?? [],
+                columnWidths: columnWidths,
+                freezeRows: max(0, sheetSpec.freeze?.rows ?? 0),
+                freezeColumns: max(0, sheetSpec.freeze?.columns ?? 0),
+                dataValidations: validations,
+                conditionalFormats: conditionalFormats,
+                comments: comments
+            ))
         }
 
         return Workbook(

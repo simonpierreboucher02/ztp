@@ -1,371 +1,436 @@
-# ZTP — Zyquo Tool Protocol
+<div align="center">
 
-Native agent runtime infrastructure for macOS. Generate Excel, Word, PowerPoint, and charts from JSON specs — no Python, no LibreOffice, no Microsoft Office required.
+# ⚙️ ZTP — Zyquo Tool Protocol
 
-Built in Swift 6. Apple Silicon first. Apple notarized.
+**A native macOS agent-tooling runtime. Generate Office documents, charts, email, messages, and drive the browser & macOS — from JSON, with no Python, no LibreOffice, no Office.**
+
+![Platform](https://img.shields.io/badge/platform-macOS%2014%2B-black?logo=apple)
+![Swift](https://img.shields.io/badge/Swift-6.0-F05138?logo=swift&logoColor=white)
+![Arch](https://img.shields.io/badge/arch-arm64%20%C2%B7%20x86__64-blue)
+![Version](https://img.shields.io/badge/version-0.8.0-2F80ED)
+![License](https://img.shields.io/badge/license-Apache--2.0-green)
+![Notarized](https://img.shields.io/badge/notarized-Developer%20ID-success?logo=apple)
+
+![Tools](https://img.shields.io/badge/tools-8-9D7CFF)
+![Tests](https://img.shields.io/badge/tests-257%20passing-4ADE80)
+![Source](https://img.shields.io/badge/source-202%20files%20%C2%B7%20~28k%20LOC-7A8693)
+![Dependencies](https://img.shields.io/badge/deps-swift--argument--parser%20only-F59E0B)
+![Protocol](https://img.shields.io/badge/protocol-ztp%2F1-5BA8FF)
+
+</div>
+
+---
+
+## Table of Contents
+
+- [Why ZTP](#why-ztp)
+- [Install](#install)
+- [Quick start](#quick-start)
+- [The Tool Protocol](#the-tool-protocol)
+- [Tool catalog](#tool-catalog)
+  - [📊 ztp-excel](#-ztp-excel) · [📝 ztp-docx](#-ztp-docx) · [📑 ztp-slides](#-ztp-slides) · [📈 ztp-chart](#-ztp-chart)
+  - [✉️ ztp-mail](#️-ztp-mail) · [💬 ztp-message](#-ztp-message) · [🌐 ztp-browser](#-ztp-browser) · [🖥️ ztp-macos](#️-ztp-macos)
+- [Architecture](#architecture)
+- [Security model](#security-model)
+- [Development](#development)
+- [License](#license)
+
+---
+
+## Why ZTP
+
+ZTP is the **execution layer** behind the [Zyquo](https://github.com/simonpierreboucher02/zyquo) AI terminal agent — but it stands alone as a fast, scriptable CLI. Every capability is a **tool** that takes a JSON spec and produces a real artifact:
+
+| | |
+|---|---|
+| 🚀 **Zero heavyweight deps** | Pure Swift + CoreGraphics/WebKit. No Python, LibreOffice, or Microsoft Office. Only `swift-argument-parser`. |
+| 📦 **Real OpenXML** | XLSX / DOCX / PPTX written from scratch (valid, round-trip-inspectable). |
+| 🔌 **One protocol** | Every tool implements `ZTPTool`; discover, inspect, validate and run any of them through a single runtime. |
+| 🔒 **Safe by default** | AppleScript escaping (no shell), SSRF guards, explicit `--confirm` for destructive ops, notarized binary. |
+| ⚡ **Instant** | Cold start < 10 ms; most generators finish in single-digit milliseconds. |
+
+---
 
 ## Install
 
-```bash
-brew tap simonpierreboucher02/ztp
-brew install ztp
-```
-
-## Tools
-
-### ztp excel — Native XLSX generation
+### Homebrew
 
 ```bash
-# Build a spreadsheet from a JSON spec
-ztp excel build workbook.json --output report.xlsx --json
-
-# Import CSV to XLSX with type inference
-ztp excel import-csv data.csv --output data.xlsx --infer-types --json
-
-# Inspect, preview, validate
-ztp excel inspect report.xlsx --json
-ztp excel preview report.xlsx --sheet Revenue --rows 20 --json
-ztp excel validate report.xlsx --json
+brew install simonpierreboucher02/tap/ztp
+# or, from the release tarball committed in this repo:
+tar xzf ztp-0.8.0-macos-arm64.tar.gz && sudo mv ztp /usr/local/bin/
 ```
 
-### ztp docx — Native DOCX generation
+### From source
 
 ```bash
-# Build a Word document from a JSON spec
-ztp docx build document.json --output report.docx --json
-
-# Inspect, extract text, outline, tables
-ztp docx inspect report.docx --json
-ztp docx outline report.docx --json
-ztp docx text report.docx --json
-ztp docx tables report.docx --json
-ztp docx validate report.docx --json
+git clone https://github.com/simonpierreboucher02/ztp.git
+cd ztp
+swift build -c release
+.build/release/ztp version
 ```
 
-### ztp slides — Native PPTX generation
+> **Requirements:** macOS 14+, Swift 6 toolchain (Xcode 16+).
+
+---
+
+## Quick start
 
 ```bash
-# Build a PowerPoint deck from a JSON spec
-ztp slides build deck.json --output deck.pptx --json
+# Discover everything the runtime can do
+ztp tools
 
-# Inspect, outline, preview, extract text
-ztp slides inspect deck.pptx --json
-ztp slides outline deck.pptx --json
-ztp slides preview deck.pptx --json
-ztp slides text deck.pptx --json
-ztp slides validate deck.pptx --json
+# Inspect a tool's commands + parameters
+ztp inspect excel
+ztp schema chart            # machine-readable JSON schema
+
+# Run any tool by name with a JSON input (file or stdin)
+echo '{"command":"build","input":"report.json","output":"report.xlsx"}' | ztp run excel
+
+# Or use the dedicated subcommands
+ztp excel build report.json --output report.xlsx --json
+ztp chart build sales.json --output sales.svg --format svg
+ztp validate excel report.json
 ```
 
-### ztp chart — Native chart generation
+---
 
-```bash
-# Build charts in PNG, SVG, or PDF
-ztp chart build chart.json --output chart.png --format png --json
-ztp chart build chart.json --output chart.svg --format svg --json
-ztp chart build chart.json --output chart.pdf --format pdf --json
+## The Tool Protocol
 
-# Inspect spec, summarize data, list themes
-ztp chart inspect chart.json --json
-ztp chart data-summary chart.json --json
-ztp chart themes --json
-ztp chart validate-spec chart.json --json
+Every tool conforms to a single Swift protocol and is registered in a runtime, so the generic commands work uniformly across all 8 tools:
+
+```swift
+public protocol ZTPTool: Sendable {
+    var manifest: ToolManifest { get }                 // name, version, capabilities, permissions
+    func execute(input: ToolInput, context: ToolContext) async throws -> ToolResult
+}
 ```
 
-### ztp mail — Native email drafting and sending
+| Command | What it does |
+|---|---|
+| `ztp tools [--json]` | List all registered tools with versions + summaries |
+| `ztp run <tool> [input.json] [--command X] [--set k=v]` | Execute any tool; reads a flat JSON params object (file or stdin) |
+| `ztp schema <tool>` | Emit the tool's input JSON schema (commands + typed parameters) |
+| `ztp inspect <tool>` | Manifest + capabilities + permissions + full command reference |
+| `ztp validate <tool> <spec.json>` | Validate a spec against the tool's schema |
+| `ztp doctor` · `ztp version` | Environment diagnostics · version/protocol info |
 
-```bash
-# Generate .eml draft (default safe mode)
-ztp mail draft message.json --output message.eml --json
+Every result is the same shape: `{ "ok": bool, "tool": "...", "duration_ms": N, "data": {...}, "error": {...} }`.
 
-# Preview as HTML
-ztp mail preview message.json --output preview.html --json
+---
 
-# Validate email spec
-ztp mail validate message.json --json
+## Tool catalog
 
-# Inspect .eml file
-ztp mail inspect message.eml --json
+| Tool | Purpose | Output |
+|------|---------|--------|
+| [📊 `ztp-excel`](#-ztp-excel) | Spreadsheets, reports, data tables | `.xlsx` |
+| [📝 `ztp-docx`](#-ztp-docx) | Word documents, reports, proposals | `.docx` |
+| [📑 `ztp-slides`](#-ztp-slides) | PowerPoint presentations, decks | `.pptx` |
+| [📈 `ztp-chart`](#-ztp-chart) | Charts & graphs | `.png` / `.svg` / `.pdf` |
+| [✉️ `ztp-mail`](#️-ztp-mail) | Email drafting & sending | `.eml` / SMTP / Apple Mail |
+| [💬 `ztp-message`](#-ztp-message) | iMessage / SMS | Messages.app / draft JSON |
+| [🌐 `ztp-browser`](#-ztp-browser) | Headless web automation | PNG / PDF / HTML / JSON |
+| [🖥️ `ztp-macos`](#️-ztp-macos) | macOS system automation | JSON / files / screenshots |
 
-# Create draft in Apple Mail
-ztp mail apple-draft message.json --json
+---
 
-# Send via SMTP (requires --confirm)
-ztp mail send message.json --smtp-profile work --confirm --json
-```
+### 📊 ztp-excel
 
-### ztp message — Native iMessage/SMS messaging
+![caps](https://img.shields.io/badge/XLSX-OpenXML-217346) ![feat](https://img.shields.io/badge/merge%20%C2%B7%20freeze%20%C2%B7%20validation%20%C2%B7%20cond--format%20%C2%B7%20comments-2F80ED)
 
-```bash
-# Preview message
-ztp message preview message.json --json
+Generate, inspect and validate Excel workbooks.
 
-# Generate draft file
-ztp message draft message.json --output draft.json --json
+**Commands:** `build` · `validate-spec` · `validate` · `inspect` · `import-csv` · `sheets` · `preview` · `cell`
 
-# Validate
-ztp message validate message.json --json
+**Spec supports:**
+- Multiple sheets, cell values (string/number/bool/date), **formulas**, number formats
+- Named **styles** (font, fill, alignment), per-cell style refs
+- **Merged cells**, **column widths**, **frozen panes**
+- **Data validation** — dropdown lists & numeric ranges
+- **Conditional formatting** — data bars & 2/3-color scales
+- **Cell comments** (notes, via legacy VML drawing)
+- CSV import with type inference
 
-# Open in Messages.app
-ztp message apple-draft message.json --json
-
-# Send (requires --confirm)
-ztp message send message.json --confirm --json
-
-# List templates
-ztp message templates --json
-```
-
-### ztp browser — Native browser automation (WebKit + Safari)
-
-```bash
-# Capture screenshot (WebKit, 2x Retina PNG)
-ztp browser screenshot https://example.com --output page.png --json
-
-# Export PDF
-ztp browser pdf https://example.com --output page.pdf --json
-
-# Extract content (HTTP-based, fast)
-ztp browser text https://example.com --json
-ztp browser links https://example.com --json
-ztp browser metadata https://example.com --json
-ztp browser html https://example.com --output page.html --json
-ztp browser inspect https://example.com --json
-
-# Safari bridge
-ztp browser open https://example.com --json
-ztp browser safari current-url --json
-ztp browser safari title --json
-```
-
-### ztp macos — Native macOS system automation
-
-```bash
-# System information
-ztp macos system info --json
-ztp macos system disks --json
-ztp macos system battery --json
-
-# Finder & files
-ztp macos finder reveal ~/Documents/report.xlsx --json
-ztp macos finder list ~/Desktop --json
-ztp macos files read ~/notes.txt --json
-ztp macos files copy a.txt b.txt --json
-
-# Clipboard & notifications
-ztp macos clipboard get --json
-ztp macos clipboard set "Hello" --json
-ztp macos notify "Build completed" --json
-
-# Screenshots
-ztp macos screenshot full --output screen.png --json
-ztp macos screenshot window Safari --output safari.png --json
-
-# Apps & processes
-ztp macos apps open Safari --json
-ztp macos apps running --json
-ztp macos processes list --json
-
-# AppleScript & Shortcuts
-ztp macos applescript eval "..." --confirm --json
-ztp macos shortcuts list --json
-ztp macos shortcuts run "Morning Routine" --confirm --json
-
-# Permissions
-ztp macos permissions check --json
-```
-
-## JSON Spec Examples
-
-### Excel
-
-```json
+```jsonc
 {
   "version": "ztp-excel/0.1",
-  "workbook": { "title": "Q4 Report", "author": "Zyquo" },
-  "sheets": [
-    {
-      "name": "Revenue",
-      "cells": [
-        { "address": "A1", "value": "Year", "style": "header" },
-        { "address": "B1", "value": "Revenue", "style": "header" },
-        { "address": "A2", "value": 2025 },
-        { "address": "B2", "value": 150000, "format": "currency" },
-        { "address": "B3", "formula": "SUM(B2:B2)", "format": "currency" }
-      ]
-    }
-  ],
-  "styles": {
-    "header": { "font": { "bold": true, "size": 12 }, "fill": { "color": "D9EAF7" } }
-  }
+  "workbook": { "title": "Q1 Report" },
+  "sheets": [{
+    "name": "Sales",
+    "freeze": { "rows": 1 },
+    "columns": [{ "column": "A", "width": 24 }],
+    "merges": ["A1:C1"],
+    "validations": [{ "range": "B2:B100", "type": "list", "values": ["Yes","No"] }],
+    "conditional_formats": [{ "range": "C2:C100", "type": "data_bar", "color": "5BA8FF" }],
+    "comments": [{ "ref": "C1", "author": "Finance", "text": "Growth %" }],
+    "cells": [
+      { "address": "A1", "value": "Quarterly Report", "style": "header" },
+      { "address": "A2", "value": "Jan" }, { "address": "B2", "value": 125000, "format": "currency" },
+      { "address": "C2", "formula": "B2/1000" }
+    ]
+  }]
 }
 ```
 
-### Word
+```bash
+ztp excel build q1.json --output q1.xlsx --json
+ztp excel import-csv data.csv --output data.xlsx --inferTypes
+```
 
-```json
+---
+
+### 📝 ztp-docx
+
+![caps](https://img.shields.io/badge/DOCX-OpenXML-2B579A) ![feat](https://img.shields.io/badge/headers%2Ffooters%20%C2%B7%20page%20numbers%20%C2%B7%20hyperlinks%20%C2%B7%20nested%20lists-2F80ED)
+
+Generate, inspect and validate Word documents.
+
+**Commands:** `build` · `validate-spec` · `validate` · `inspect` · `outline` · `text` · `tables`
+
+**Spec supports:**
+- Sections with **headers & footers** (incl. `{page}` → live page number)
+- Headings (1-9), paragraphs with rich **runs** (bold/italic/underline/size/font/color)
+- **Hyperlinks** (`link` on a run → clickable, styled)
+- **Nested bullet/numbered lists** (items as `"text"` or `{ "text", "level" }`, levels 0-8)
+- Tables (headers, rows, column widths), images, page breaks, horizontal rules
+- Named paragraph/font styles
+
+```jsonc
 {
   "version": "ztp-docx/0.1",
-  "document": { "title": "Research Report", "author": "Zyquo" },
-  "sections": [
-    {
-      "elements": [
-        { "type": "heading", "level": 1, "text": "Executive Summary" },
-        { "type": "paragraph", "text": "Generated by ztp-docx." },
-        { "type": "bullet_list", "items": ["Revenue grew 12%", "Margins improved"] },
-        { "type": "table", "headers": ["Metric", "Value"], "rows": [["Revenue", "$150K"]] }
-      ]
-    }
-  ]
+  "document": { "title": "Proposal" },
+  "sections": [{
+    "header": "Acme Corp — Confidential",
+    "footer": "Page {page}",
+    "elements": [
+      { "type": "heading", "level": 1, "text": "Overview" },
+      { "type": "paragraph", "runs": [
+        { "text": "See " }, { "text": "our site", "link": "https://zyquo.dev" }, { "text": " for details." }
+      ]},
+      { "type": "bullet_list", "items": ["Top", { "text": "Nested", "level": 1 }] }
+    ]
+  }]
 }
 ```
 
-### PowerPoint
+---
 
-```json
+### 📑 ztp-slides
+
+![caps](https://img.shields.io/badge/PPTX-OpenXML-D24726) ![feat](https://img.shields.io/badge/speaker%20notes%20%C2%B7%20slide%20numbers%20%C2%B7%20transitions-2F80ED)
+
+Generate, inspect and validate PowerPoint presentations.
+
+**Commands:** `build` · `validate-spec` · `validate` · `inspect` · `outline` · `preview` · `text`
+
+**Spec supports:**
+- 9 layouts (title, title-content, two-column, image-right/left, table, section-divider, quote, blank)
+- Theme (font, accent, background, text color), 16:9 / 4:3
+- Content: bullets, numbered lists, tables, images, **KPI cards**, shapes, paragraphs
+- **Speaker notes** (rendered to the notes view)
+- **Slide numbers** (`presentation.slideNumbers`) and **transitions** (fade/push/wipe/cut/split/cover/zoom)
+
+```jsonc
 {
   "version": "ztp-slides/0.1",
-  "presentation": { "title": "Business Review", "author": "Zyquo", "size": "16:9" },
-  "theme": { "font": "Aptos", "accent": "#3B82F6" },
+  "presentation": { "title": "Q1 Review", "slideNumbers": true },
   "slides": [
-    { "layout": "title", "title": "Business Review", "subtitle": "Q4 2026" },
-    {
-      "layout": "title-content", "title": "Key Points",
-      "content": [{ "type": "bullets", "items": ["Revenue +12%", "Margins +6pp"] }]
-    },
-    {
-      "layout": "table", "title": "Metrics",
-      "table": { "headers": ["Metric", "Value"], "rows": [["Revenue", "$2.89M"]] }
-    }
+    { "layout": "title", "title": "Q1 Review", "transition": "fade",
+      "notes": "Greet the audience; mention record quarter." },
+    { "layout": "title-content", "title": "Agenda",
+      "content": [{ "type": "bullets", "items": ["Results", "Outlook"] }] }
   ]
 }
 ```
 
-### Chart
+---
 
-```json
+### 📈 ztp-chart
+
+![caps](https://img.shields.io/badge/render-CoreGraphics%20%C2%B7%20SVG-5EEAD4) ![feat](https://img.shields.io/badge/log%20scale%20%C2%B7%20stacked%20%C2%B7%20data%20labels%20%C2%B7%20axis%20bounds-2F80ED)
+
+Render charts to PNG, SVG or PDF from inline data or CSV.
+
+**Commands:** `build` · `validate-spec` · `inspect` · `data-summary` · `themes`
+
+**Spec supports:**
+- Types: line, bar, scatter, area, pie, heatmap, candlestick
+- Multi-series, custom colors, legend, gridlines, 7 built-in themes
+- **Axis min/max enforcement**, **log scale** (`axis.type: "log"`)
+- **Stacked** bars/areas, **data labels** on bars
+- Output formats png / svg / pdf
+
+```jsonc
 {
   "version": "ztp-chart/0.1",
-  "chart": { "type": "line", "title": "Revenue Growth", "width": 1200, "height": 700, "theme": "zyquo-light" },
-  "data": {
-    "values": [
-      { "year": 2020, "revenue": 100000 },
-      { "year": 2021, "revenue": 120000 },
-      { "year": 2022, "revenue": 150000 }
-    ]
-  },
-  "x": { "field": "year", "label": "Year" },
-  "y": { "label": "Revenue ($)" },
-  "series": [{ "field": "revenue", "label": "Revenue" }],
-  "legend": true,
-  "grid": true
+  "chart": { "type": "bar", "title": "Revenue", "width": 1000, "height": 600 },
+  "data": { "values": [{ "q": "Q1", "a": 10, "b": 5 }, { "q": "Q2", "a": 20, "b": 8 }] },
+  "x": { "field": "q" }, "y": { "type": "log" },
+  "stacked": true, "data_labels": true,
+  "series": [{ "field": "a", "label": "Product A" }, { "field": "b", "label": "Product B" }]
 }
 ```
 
-Supported chart types: `line`, `bar`, `scatter`, `area`, `pie`, `heatmap`, `candlestick`
+```bash
+ztp chart build sales.json --output sales.svg --format svg
+ztp chart themes --json
+```
 
-Export formats: `png` (2x Retina), `svg`, `pdf` (vector)
+---
 
-Themes: `zyquo-light`, `zyquo-dark`, `finance-light`, `finance-dark`, `research-paper`, `minimal`, `terminal`
+### ✉️ ztp-mail
 
-### Email
+![caps](https://img.shields.io/badge/RFC%205322-MIME-7DD3FC) ![feat](https://img.shields.io/badge/SMTP%20%C2%B7%20Apple%20Mail%20%C2%B7%20attachments%20%C2%B7%20inline%20images%20%C2%B7%20priority-2F80ED)
 
-```json
+Draft, preview and send email.
+
+**Commands:** `validate` · `preview` · `draft` (.eml) · `send` (SMTP, requires `--confirm`) · `apple-draft` · `inspect`
+
+**Spec supports:**
+- from / to / cc / bcc / reply-to, subject, signature
+- Body: plain / markdown / html (multipart/alternative)
+- **Attachments** (base64, MIME auto-detected, 100 MB cap)
+- **Inline images** (`inline_images` → `multipart/related` + `cid:` references)
+- **Priority** (high/low → X-Priority/Importance) and **custom headers** (CRLF-injection-guarded)
+- SMTP profiles in `~/.ztp/mail/profiles.json`
+
+```jsonc
 {
   "version": "ztp-mail/0.1",
   "message": {
-    "from": "agent@zyquo.dev",
-    "to": ["client@example.com"],
-    "subject": "Quarterly Report",
-    "body": {
-      "type": "markdown",
-      "content": "Bonjour,\n\n## Points clés\n\n- Revenue **+12%**\n- Margins improved\n\nCordialement,"
-    },
-    "attachments": [{ "path": "report.xlsx", "name": "Q4_Report.xlsx" }],
-    "signature": "-- \nZyquo AI Agent"
+    "from": "me@acme.com", "to": ["client@example.com"],
+    "subject": "Your report", "priority": "high",
+    "headers": { "X-Campaign": "q1" },
+    "body": { "type": "markdown", "content": "Hi — see the logo below. <img src=\"cid:logo\">" },
+    "inline_images": [{ "path": "logo.png", "cid": "logo" }],
+    "attachments": [{ "path": "report.xlsx" }]
   }
 }
 ```
 
-Body types: `plain`, `html`, `markdown` (auto-converted to styled HTML)
+---
 
-### Message
+### 💬 ztp-message
 
-```json
+![caps](https://img.shields.io/badge/iMessage%20%C2%B7%20SMS-Messages.app-34DA50) ![feat](https://img.shields.io/badge/templates%20%C2%B7%20SMS%20limit%20checks-2F80ED)
+
+Draft and send iMessage / SMS via Messages.app.
+
+**Commands:** `validate` · `preview` · `draft` · `send` (requires `--confirm`) · `apple-draft` · `inspect` · `templates`
+
+**Spec supports:**
+- Channel (imessage / sms), recipients (name + phone/email)
+- Built-in **templates** with `{{variable}}` substitution
+- **SMS segmentation warnings** (160 GSM / 70 Unicode) + recipient-type validation
+- Safe AppleScript bridge (full escaping, no shell injection)
+
+```jsonc
 {
   "version": "ztp-message/0.1",
   "message": {
     "channel": "imessage",
-    "to": [{ "name": "Alex", "address": "+14185551234" }],
-    "body": { "type": "plain", "content": "Confirmation pour demain à 10h." }
+    "to": [{ "name": "Alice", "address": "+15551234567" }],
+    "body": { "content": "Report is ready ✅" }
   }
 }
 ```
 
-Channels: `imessage`, `sms` (via Messages.app). Built-in templates with `{{variable}}` substitution.
+---
 
-## Agent-Ready JSON Output
+### 🌐 ztp-browser
 
-Every command supports `--json` for structured machine-readable output:
+![caps](https://img.shields.io/badge/WebKit%20%C2%B7%20HTTP%20%C2%B7%20Safari-bridges-FBBF24) ![feat](https://img.shields.io/badge/SSRF%20guard%20%C2%B7%20custom%20headers%20%C2%B7%20wait%20strategies-2F80ED)
 
-```json
+Headless web capture & extraction.
+
+**Commands:** `screenshot` · `pdf` · `html` · `text` · `links` · `metadata` · `inspect` · `open` · `run` · `safari`
+
+**Spec supports:**
+- WebKit rendering (screenshot / PDF), HTTP fetch (html/text/links/metadata)
+- Viewport (width/height/scale), **wait strategies** (dom-ready / network-idle / timeout)
+- **Custom HTTP headers** (auth, accept, …)
+- **SSRF protection** — private / loopback / link-local / cloud-metadata hosts blocked by default
+
+```jsonc
 {
-  "ok": true,
-  "tool": "ztp-excel",
-  "command": "build",
-  "output": "report.xlsx",
-  "metrics": {
-    "duration_ms": 3,
-    "sheets": 1,
-    "cells_written": 13,
-    "file_size_bytes": 7237
+  "version": "ztp-browser/0.1",
+  "task": {
+    "action": "screenshot", "url": "https://example.com",
+    "viewport": { "width": 1440, "height": 900 },
+    "wait": { "strategy": "network-idle", "timeout_ms": 8000 },
+    "headers": { "Authorization": "Bearer ..." },
+    "output": "shot.png"
   }
 }
 ```
+
+```bash
+ztp browser screenshot https://example.com --output shot.png
+ztp browser text https://example.com
+```
+
+---
+
+### 🖥️ ztp-macos
+
+![caps](https://img.shields.io/badge/AppleScript%20%C2%B7%20Process%20%C2%B7%20Files-system-EF4444) ![feat](https://img.shields.io/badge/safe%20escaping%20%C2%B7%20--confirm%20gating-2F80ED)
+
+macOS system automation.
+
+**Categories:** `system-*` (info/disks/memory/battery) · `finder-*` · `files-*` (read/write/copy/move/delete/info/exists) · `clipboard-*` · `notify` · `screenshot-*` · `apps-*` · `windows-list` · `processes-*` · `applescript-*` · `shortcuts-*` · `permissions-check`
+
+- All mutating/destructive ops require `--confirm`
+- AppleScript runs via `Process` (no shell), with full string escaping (newline/quote/backslash)
+
+```bash
+ztp macos system-info --json
+ztp macos files-write /tmp/out.txt --content "hello" --confirm
+ztp macos clipboard-get
+ztp macos screenshot-full --output screen.png
+```
+
+---
 
 ## Architecture
 
-```
-ztp/
-├── Sources/
-│   ├── ZTPCLI/          CLI entry point and commands
-│   ├── ZTPCore/         Runtime engine, registry, events
-│   ├── ZTPProtocols/    Tool protocol, manifests, contracts
-│   ├── ZTPExcel/        XLSX generation (OpenXML + ZIP)
-│   ├── ZTPDocx/         DOCX generation (OpenXML + ZIP)
-│   ├── ZTPSlides/       PPTX generation (OpenXML + ZIP)
-│   ├── ZTPChart/        Chart rendering (CoreGraphics + SVG)
-│   ├── ZTPMail/         Email drafting, rendering, SMTP
-│   ├── ZTPMessage/      iMessage/SMS via Messages.app
-│   ├── ZTPBrowser/      WebKit screenshots, PDF, extraction
-│   └── ZTPMacOS/        System, Finder, clipboard, apps, AppleScript
-├── Tests/               210 tests across 45 suites
-└── Examples/            JSON spec examples
+```text
+ztp (ZTPCLI)
+├── ZTPProtocols     ZTPTool, ToolManifest, ToolInput/Result, JSONValue
+├── ZTPCore          ToolRegistry, ZTPRuntime (actor), EventBus, Logger, JSONOutput
+├── ZTPExcel  ZTPDocx  ZTPSlides  ZTPChart      ← document & visual generators
+└── ZTPMail   ZTPMessage  ZTPBrowser  ZTPMacOS  ← comms, web & system
 ```
 
-## Stats
+Each generator owns its **Schema → Model → OpenXML/render → package** pipeline with a dedicated validator. The CLI exposes both per-tool subcommands and the generic protocol commands (`run`/`tools`/`schema`/`inspect`/`validate`).
 
-| | |
-|---|---|
-| Language | Swift 6 |
-| Platform | macOS 14+ / Apple Silicon |
-| Binary size | 7.7 MB |
-| Dependencies | swift-argument-parser only |
-| Source files | 197 |
-| Lines of code | ~28,000 |
-| Tests | 210 |
-| Startup | < 10 ms |
+---
 
-## Runtime Commands
+## Security model
 
+- 🔐 **No shell interpolation** for AppleScript — everything goes through `Process` arg arrays with strict escaping.
+- 🛡️ **SSRF guard** blocks `127.0.0.1`, `10/8`, `172.16/12`, `192.168/16`, `169.254/16` (incl. cloud metadata), CGNAT, loopback IPv6.
+- ✅ **Explicit consent** — `send`, `files-delete`, `applescript-run`, etc. require `--confirm`.
+- 🧾 **Header-injection guards** strip CR/LF from mail headers.
+- 🍎 **Notarized** Developer ID binary, hardened runtime.
+
+---
+
+## Development
+
+```bash
+swift build            # debug
+swift test             # 257 tests across 58 suites
+swift build -c release # optimized
+
+# Sign + notarize a release (Developer ID + notarytool profile)
+./scripts/sign-and-notarize.sh release
+./scripts/sign-and-notarize.sh sign
+./scripts/sign-and-notarize.sh zip
+./scripts/sign-and-notarize.sh notarize
 ```
-ztp version       Show version info
-ztp tools         List registered tools
-ztp doctor        Check installation health
-ztp run           Execute a tool programmatically
-ztp validate      Validate manifests and schemas
-ztp inspect       Inspect a registered tool
-```
+
+---
 
 ## License
 
-MIT
+Apache-2.0 © Simon-Pierre Boucher. Part of the [Zyquo](https://github.com/simonpierreboucher02/zyquo) project.

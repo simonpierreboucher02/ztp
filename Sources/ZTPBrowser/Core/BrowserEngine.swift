@@ -29,13 +29,26 @@ public struct BrowserEngine: Sendable {
         url: URL,
         viewport: Viewport = .desktop,
         timeoutMs: Int = 10000,
-        output: String? = nil
+        output: String? = nil,
+        headers: [String: String] = [:],
+        waitStrategy: WaitStrategy? = nil
     ) async throws -> BrowserResult {
         let start = ContinuousClock.now
 
+        // Per-strategy rendering settle (true network-idle detection is not
+        // available via WKWebView, so network-idle uses a longer settle to let
+        // async resources/XHR finish; dom-ready returns as soon as the DOM is up).
+        let settleMs: Int
+        switch waitStrategy {
+        case .domReady: settleMs = 150
+        case .networkIdle: settleMs = 1500
+        case .timeout: settleMs = max(500, timeoutMs / 2)
+        case nil: settleMs = 500
+        }
+
         switch action {
         case .screenshot:
-            let pngData = try await WebKitRenderer.screenshot(url: url, viewport: viewport, timeoutMs: timeoutMs)
+            let pngData = try await WebKitRenderer.screenshot(url: url, viewport: viewport, timeoutMs: timeoutMs, settleMs: settleMs)
 
             if let outputPath = output {
                 try atomicWrite(data: pngData, to: outputPath)
@@ -45,7 +58,7 @@ public struct BrowserEngine: Sendable {
             return BrowserResult(data: pngData, text: nil, metadata: nil, links: nil, durationMs: elapsed)
 
         case .pdf:
-            let pdfData = try await WebKitRenderer.pdf(url: url, viewport: viewport, timeoutMs: timeoutMs)
+            let pdfData = try await WebKitRenderer.pdf(url: url, viewport: viewport, timeoutMs: timeoutMs, settleMs: settleMs)
 
             if let outputPath = output {
                 try atomicWrite(data: pdfData, to: outputPath)
@@ -55,7 +68,7 @@ public struct BrowserEngine: Sendable {
             return BrowserResult(data: pdfData, text: nil, metadata: nil, links: nil, durationMs: elapsed)
 
         case .html:
-            let fetchResult = try await HTTPFetcher.fetch(url: url, timeoutMs: timeoutMs)
+            let fetchResult = try await HTTPFetcher.fetch(url: url, timeoutMs: timeoutMs, headers: headers)
             let htmlData = Data(fetchResult.html.utf8)
 
             if let outputPath = output {
@@ -66,25 +79,25 @@ public struct BrowserEngine: Sendable {
             return BrowserResult(data: htmlData, text: fetchResult.html, metadata: nil, links: nil, durationMs: elapsed)
 
         case .text:
-            let fetchResult = try await HTTPFetcher.fetch(url: url, timeoutMs: timeoutMs)
+            let fetchResult = try await HTTPFetcher.fetch(url: url, timeoutMs: timeoutMs, headers: headers)
             let plainText = HTMLContentParser.extractText(from: fetchResult.html)
             let elapsed = elapsedMs(from: start)
             return BrowserResult(data: nil, text: plainText, metadata: nil, links: nil, durationMs: elapsed)
 
         case .links:
-            let fetchResult = try await HTTPFetcher.fetch(url: url, timeoutMs: timeoutMs)
+            let fetchResult = try await HTTPFetcher.fetch(url: url, timeoutMs: timeoutMs, headers: headers)
             let links = HTMLContentParser.extractLinks(from: fetchResult.html, baseURL: fetchResult.finalURL)
             let elapsed = elapsedMs(from: start)
             return BrowserResult(data: nil, text: nil, metadata: nil, links: links, durationMs: elapsed)
 
         case .metadata:
-            let fetchResult = try await HTTPFetcher.fetch(url: url, timeoutMs: timeoutMs)
+            let fetchResult = try await HTTPFetcher.fetch(url: url, timeoutMs: timeoutMs, headers: headers)
             let meta = HTMLContentParser.extractMetadata(from: fetchResult.html, baseURL: fetchResult.finalURL)
             let elapsed = elapsedMs(from: start)
             return BrowserResult(data: nil, text: nil, metadata: meta, links: nil, durationMs: elapsed)
 
         case .inspect:
-            let fetchResult = try await HTTPFetcher.fetch(url: url, timeoutMs: timeoutMs)
+            let fetchResult = try await HTTPFetcher.fetch(url: url, timeoutMs: timeoutMs, headers: headers)
             let meta = HTMLContentParser.extractMetadata(from: fetchResult.html, baseURL: fetchResult.finalURL)
             let links = HTMLContentParser.extractLinks(from: fetchResult.html, baseURL: fetchResult.finalURL)
             let plainText = HTMLContentParser.extractText(from: fetchResult.html)
@@ -133,7 +146,9 @@ public struct BrowserEngine: Sendable {
             url: url,
             viewport: viewport,
             timeoutMs: timeoutMs,
-            output: spec.task.output
+            output: spec.task.output,
+            headers: spec.task.headers ?? [:],
+            waitStrategy: spec.task.wait?.strategy.flatMap(WaitStrategy.init(rawValue:))
         )
     }
 

@@ -139,7 +139,7 @@ public struct LinearScale: ChartScale, Sendable {
         return niceNormalized * magnitude
     }
 
-    private static func formatWithCommas(_ value: Int) -> String {
+    static func formatWithCommas(_ value: Int) -> String {
         let isNegative = value < 0
         var absValue = abs(value)
         var parts: [String] = []

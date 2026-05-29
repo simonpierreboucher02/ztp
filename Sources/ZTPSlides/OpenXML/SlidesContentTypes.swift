@@ -14,7 +14,7 @@ public struct SlidesContentTypes: Sendable {
     ///   - hasImages: Whether the presentation contains image elements.
     ///   - imageExtensions: The set of image file extensions used (e.g. "png", "jpg").
     /// - Returns: The complete XML string.
-    public static func toXML(slideCount: Int, hasImages: Bool, imageExtensions: Set<String>) -> String {
+    public static func toXML(slideCount: Int, hasImages: Bool, imageExtensions: Set<String>, notesSlideNumbers: [Int] = []) -> String {
         let ns = "http://schemas.openxmlformats.org/package/2006/content-types"
 
         var xml = "<?xml version=\"1.0\" encoding=\"UTF-8\" standalone=\"yes\"?>\n"
@@ -66,6 +66,16 @@ public struct SlidesContentTypes: Sendable {
         // Theme
         xml += "<Override PartName=\"/ppt/theme/theme1.xml\""
         xml += " ContentType=\"application/vnd.openxmlformats-officedocument.theme+xml\"/>"
+
+        // Notes master + notes slides
+        if !notesSlideNumbers.isEmpty {
+            xml += "<Override PartName=\"/ppt/notesMasters/notesMaster1.xml\""
+            xml += " ContentType=\"application/vnd.openxmlformats-officedocument.presentationml.notesMaster+xml\"/>"
+            for n in notesSlideNumbers.sorted() {
+                xml += "<Override PartName=\"/ppt/notesSlides/notesSlide\(n).xml\""
+                xml += " ContentType=\"application/vnd.openxmlformats-officedocument.presentationml.notesSlide+xml\"/>"
+            }
+        }
 
         // Core properties
         xml += "<Override PartName=\"/docProps/core.xml\""

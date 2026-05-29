@@ -13,7 +13,7 @@ public struct PresentationWriter: Sendable {
     ///   - slideCount: The number of slides in the presentation.
     ///   - size: The slide dimensions in EMU.
     /// - Returns: The complete XML string.
-    public static func toXML(slideCount: Int, size: SlideSize) -> String {
+    public static func toXML(slideCount: Int, size: SlideSize, notesMasterRelId: String? = nil) -> String {
         var xml = "<?xml version=\"1.0\" encoding=\"UTF-8\" standalone=\"yes\"?>\n"
         xml += "<p:presentation"
         xml += " xmlns:a=\"http://schemas.openxmlformats.org/drawingml/2006/main\""
@@ -24,6 +24,11 @@ public struct PresentationWriter: Sendable {
         xml += "<p:sldMasterIdLst>"
         xml += "<p:sldMasterId id=\"2147483648\" r:id=\"rId1\"/>"
         xml += "</p:sldMasterIdLst>"
+
+        // Notes master reference (must precede sldIdLst per the schema)
+        if let notesMasterRelId {
+            xml += "<p:notesMasterIdLst><p:notesMasterId r:id=\"\(notesMasterRelId)\"/></p:notesMasterIdLst>"
+        }
 
         // Slide list
         xml += "<p:sldIdLst>"

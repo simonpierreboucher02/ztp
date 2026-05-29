@@ -29,6 +29,31 @@ struct WorksheetWriter: Sendable {
         var xml = "<?xml version=\"1.0\" encoding=\"UTF-8\" standalone=\"yes\"?>\n"
         xml += "<worksheet xmlns=\"http://schemas.openxmlformats.org/spreadsheetml/2006/main\""
         xml += " xmlns:r=\"http://schemas.openxmlformats.org/officeDocument/2006/relationships\">"
+
+        // Frozen panes (sheetViews must precede sheetData).
+        if worksheet.freezeRows > 0 || worksheet.freezeColumns > 0 {
+            let x = worksheet.freezeColumns
+            let y = worksheet.freezeRows
+            let topLeft = CellAddress(column: x + 1, row: y + 1).reference
+            let activePane = (x > 0 && y > 0) ? "bottomRight" : (x > 0 ? "topRight" : "bottomLeft")
+            xml += "<sheetViews><sheetView tabSelected=\"1\" workbookViewId=\"0\">"
+            xml += "<pane"
+            if x > 0 { xml += " xSplit=\"\(x)\"" }
+            if y > 0 { xml += " ySplit=\"\(y)\"" }
+            xml += " topLeftCell=\"\(topLeft)\" activePane=\"\(activePane)\" state=\"frozen\"/>"
+            xml += "<selection pane=\"\(activePane)\" activeCell=\"\(topLeft)\" sqref=\"\(topLeft)\"/>"
+            xml += "</sheetView></sheetViews>"
+        }
+
+        // Column widths (cols must precede sheetData).
+        if !worksheet.columnWidths.isEmpty {
+            xml += "<cols>"
+            for cw in worksheet.columnWidths where cw.min >= 1 && cw.max >= cw.min && cw.width > 0 {
+                xml += "<col min=\"\(cw.min)\" max=\"\(cw.max)\" width=\"\(formatNumber(cw.width))\" customWidth=\"1\"/>"
+            }
+            xml += "</cols>"
+        }
+
         xml += "<sheetData>"
 
         for rowNum in sortedRowNumbers {
@@ -91,8 +116,73 @@ struct WorksheetWriter: Sendable {
         }
 
         xml += "</sheetData>"
+
+        // Merged cells (must follow sheetData).
+        let validMerges = worksheet.merges.filter { $0.contains(":") }
+        if !validMerges.isEmpty {
+            xml += "<mergeCells count=\"\(validMerges.count)\">"
+            for ref in validMerges {
+                xml += "<mergeCell ref=\"\(XMLEscaping.escape(ref))\"/>"
+            }
+            xml += "</mergeCells>"
+        }
+
+        // Conditional formatting (data bars / color scales) — self-contained,
+        // no dxf entries required. Must precede dataValidations.
+        var cfPriority = 1
+        for cf in worksheet.conditionalFormats {
+            xml += "<conditionalFormatting sqref=\"\(XMLEscaping.escape(cf.sqref))\">"
+            switch cf.kind {
+            case .dataBar:
+                xml += "<cfRule type=\"dataBar\" priority=\"\(cfPriority)\"><dataBar>"
+                xml += "<cfvo type=\"min\"/><cfvo type=\"max\"/><color rgb=\"\(argb(cf.barColor ?? "638EC6"))\"/>"
+                xml += "</dataBar></cfRule>"
+            case .colorScale:
+                let colors = (cf.scaleColors?.isEmpty == false) ? cf.scaleColors! : ["F8696B", "FFEB84", "63BE7B"]
+                xml += "<cfRule type=\"colorScale\" priority=\"\(cfPriority)\"><colorScale>"
+                if colors.count >= 3 {
+                    xml += "<cfvo type=\"min\"/><cfvo type=\"percentile\" val=\"50\"/><cfvo type=\"max\"/>"
+                } else {
+                    xml += "<cfvo type=\"min\"/><cfvo type=\"max\"/>"
+                }
+                for c in colors { xml += "<color rgb=\"\(argb(c))\"/>" }
+                xml += "</colorScale></cfRule>"
+            }
+            xml += "</conditionalFormatting>"
+            cfPriority += 1
+        }
+
+        // Data validations (dropdowns / numeric ranges).
+        if !worksheet.dataValidations.isEmpty {
+            xml += "<dataValidations count=\"\(worksheet.dataValidations.count)\">"
+            for dv in worksheet.dataValidations {
+                xml += "<dataValidation type=\"\(dv.type)\""
+                if dv.formula2 != nil { xml += " operator=\"between\"" }
+                xml += " allowBlank=\"1\" showInputMessage=\"1\" showErrorMessage=\"1\""
+                xml += " sqref=\"\(XMLEscaping.escape(dv.sqref))\">"
+                xml += "<formula1>\(XMLEscaping.escape(dv.formula1))</formula1>"
+                if let f2 = dv.formula2 { xml += "<formula2>\(XMLEscaping.escape(f2))</formula2>" }
+                xml += "</dataValidation>"
+            }
+            xml += "</dataValidations>"
+        }
+
+        // Legacy drawing reference for cell comments (must be near the end).
+        if !worksheet.comments.isEmpty {
+            xml += "<legacyDrawing r:id=\"rIdVml1\"/>"
+        }
+
         xml += "</worksheet>"
         return xml
+    }
+
+    /// Normalize a hex color to 8-digit ARGB (Excel wants the alpha prefix).
+    private static func argb(_ hex: String) -> String {
+        var h = hex.hasPrefix("#") ? String(hex.dropFirst()) : hex
+        h = h.uppercased()
+        if h.count == 6 { return "FF" + h }
+        if h.count == 8 { return h }
+        return "FF638EC6"
     }
 
     // MARK: - Date serial conversion

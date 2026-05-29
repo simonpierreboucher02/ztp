@@ -111,10 +111,17 @@ public struct AppleMessagesSender: Sendable {
     // MARK: - Helpers
 
     /// Escape a string for safe inclusion in AppleScript double-quoted strings.
+    ///
+    /// Escapes backslash, quote AND newline/carriage-return/tab. Omitting the
+    /// newline escapes (the previous behavior) allowed a crafted recipient or
+    /// body to break out of the quoted string and inject AppleScript commands.
     private static func escapeAppleScript(_ string: String) -> String {
         string
             .replacingOccurrences(of: "\\", with: "\\\\")
             .replacingOccurrences(of: "\"", with: "\\\"")
+            .replacingOccurrences(of: "\r", with: "\\r")
+            .replacingOccurrences(of: "\n", with: "\\n")
+            .replacingOccurrences(of: "\t", with: "\\t")
     }
 
     /// Execute an AppleScript string via /usr/bin/osascript.

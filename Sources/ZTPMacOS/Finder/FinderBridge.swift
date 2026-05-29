@@ -29,15 +29,14 @@ public struct FinderBridge: Sendable {
             throw FinderError.pathNotFound(expandedPath)
         }
 
-        let escaped = expandedPath.replacingOccurrences(of: "\"", with: "\\\"")
+        let escaped = AppleScriptSafe.escape(expandedPath)
         let script = """
             tell application "Finder"
                 reveal POSIX file "\(escaped)"
                 activate
             end tell
             """
-        let output = shellOutput("osascript -e '\(script.replacingOccurrences(of: "'", with: "'\\''"))'")
-        _ = output
+        _ = AppleScriptSafe.run(script)
         return Result(success: true, message: "Revealed \(expandedPath) in Finder")
     }
 

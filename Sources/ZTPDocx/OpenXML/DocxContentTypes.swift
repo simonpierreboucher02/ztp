@@ -14,7 +14,12 @@ public struct DocxContentTypes: Sendable {
     ///   - imageExtensions: The set of lowercase file extensions (e.g. "png", "jpeg")
     ///     present among the document images.
     /// - Returns: A well-formed XML string.
-    public static func toXML(hasImages: Bool, imageExtensions: Set<String>) -> String {
+    public static func toXML(
+        hasImages: Bool,
+        imageExtensions: Set<String>,
+        hasHeader: Bool = false,
+        hasFooter: Bool = false
+    ) -> String {
         var xml = "<?xml version=\"1.0\" encoding=\"UTF-8\" standalone=\"yes\"?>\n"
         xml += "<Types xmlns=\"http://schemas.openxmlformats.org/package/2006/content-types\">\n"
 
@@ -51,6 +56,12 @@ public struct DocxContentTypes: Sendable {
         xml += "  <Override PartName=\"/word/document.xml\" ContentType=\"application/vnd.openxmlformats-officedocument.wordprocessingml.document.main+xml\"/>\n"
         xml += "  <Override PartName=\"/word/styles.xml\" ContentType=\"application/vnd.openxmlformats-officedocument.wordprocessingml.styles+xml\"/>\n"
         xml += "  <Override PartName=\"/word/numbering.xml\" ContentType=\"application/vnd.openxmlformats-officedocument.wordprocessingml.numbering+xml\"/>\n"
+        if hasHeader {
+            xml += "  <Override PartName=\"/word/header1.xml\" ContentType=\"application/vnd.openxmlformats-officedocument.wordprocessingml.header+xml\"/>\n"
+        }
+        if hasFooter {
+            xml += "  <Override PartName=\"/word/footer1.xml\" ContentType=\"application/vnd.openxmlformats-officedocument.wordprocessingml.footer+xml\"/>\n"
+        }
         xml += "  <Override PartName=\"/docProps/core.xml\" ContentType=\"application/vnd.openxmlformats-package.core-properties+xml\"/>\n"
         xml += "  <Override PartName=\"/docProps/app.xml\" ContentType=\"application/vnd.openxmlformats-officedocument.extended-properties+xml\"/>\n"
 

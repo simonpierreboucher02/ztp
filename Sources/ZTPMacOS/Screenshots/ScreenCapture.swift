@@ -68,7 +68,7 @@ public struct ScreenCapture: Sendable {
         )
 
         // Get the window ID via AppleScript + System Events
-        let escapedApp = appName.replacingOccurrences(of: "\"", with: "\\\"")
+        let escapedApp = AppleScriptSafe.escape(appName)
         let windowIDScript = """
             tell application "System Events"
                 set frontApp to first application process whose name is "\(escapedApp)"
@@ -77,8 +77,7 @@ public struct ScreenCapture: Sendable {
             end tell
             """
 
-        let windowIDStr = shellOutput("osascript -e '\(windowIDScript.replacingOccurrences(of: "'", with: "'\\''"))'")
-            .trimmingCharacters(in: .whitespacesAndNewlines)
+        let windowIDStr = AppleScriptSafe.run(windowIDScript)
 
         guard let windowID = Int(windowIDStr) else {
             // Fallback: bring app to front and capture the frontmost window
@@ -116,8 +115,8 @@ public struct ScreenCapture: Sendable {
 
     private static func captureWithFallback(appName: String, output: String) throws -> CaptureResult {
         // Bring the app to front
-        let activateScript = "tell application \"\(appName.replacingOccurrences(of: "\"", with: "\\\""))\" to activate"
-        _ = shellOutput("osascript -e '\(activateScript.replacingOccurrences(of: "'", with: "'\\''"))'")
+        let activateScript = "tell application \"\(AppleScriptSafe.escape(appName))\" to activate"
+        _ = AppleScriptSafe.run(activateScript)
 
         // Small delay to let the window come forward
         Thread.sleep(forTimeInterval: 0.5)

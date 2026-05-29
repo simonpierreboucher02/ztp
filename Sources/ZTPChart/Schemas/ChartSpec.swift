@@ -104,6 +104,10 @@ public struct ChartSpec: Codable, Sendable, Equatable {
     public let series: [ChartSeriesConfig]?
     public let legend: Bool?
     public let grid: Bool?
+    /// Stack series (bar/area) instead of grouping side-by-side.
+    public let stacked: Bool?
+    /// Draw value labels on data points/bars.
+    public let dataLabels: Bool?
 
     // Pie-specific
     public let labelField: String?
@@ -113,7 +117,8 @@ public struct ChartSpec: Codable, Sendable, Equatable {
     public let ohlc: OHLCSpec?
 
     enum CodingKeys: String, CodingKey {
-        case version, chart, data, x, y, series, legend, grid
+        case version, chart, data, x, y, series, legend, grid, stacked
+        case dataLabels = "data_labels"
         case labelField = "label_field"
         case valueField = "value_field"
         case ohlc
@@ -128,6 +133,8 @@ public struct ChartSpec: Codable, Sendable, Equatable {
         series: [ChartSeriesConfig]? = nil,
         legend: Bool? = nil,
         grid: Bool? = nil,
+        stacked: Bool? = nil,
+        dataLabels: Bool? = nil,
         labelField: String? = nil,
         valueField: String? = nil,
         ohlc: OHLCSpec? = nil
@@ -140,6 +147,8 @@ public struct ChartSpec: Codable, Sendable, Equatable {
         self.series = series
         self.legend = legend
         self.grid = grid
+        self.stacked = stacked
+        self.dataLabels = dataLabels
         self.labelField = labelField
         self.valueField = valueField
         self.ohlc = ohlc

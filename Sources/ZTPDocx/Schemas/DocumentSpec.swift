@@ -72,6 +72,8 @@ public struct RunSpec: Codable, Sendable, Equatable {
     public let fontSize: Double?
     public let fontFamily: String?
     public let color: String?
+    /// Optional hyperlink target URL; makes this run a clickable link.
+    public let link: String?
 
     public init(
         text: String,
@@ -80,7 +82,8 @@ public struct RunSpec: Codable, Sendable, Equatable {
         underline: Bool? = nil,
         fontSize: Double? = nil,
         fontFamily: String? = nil,
-        color: String? = nil
+        color: String? = nil,
+        link: String? = nil
     ) {
         self.text = text
         self.bold = bold
@@ -89,6 +92,7 @@ public struct RunSpec: Codable, Sendable, Equatable {
         self.fontSize = fontSize
         self.fontFamily = fontFamily
         self.color = color
+        self.link = link
     }
 }
 
@@ -97,8 +101,8 @@ public struct RunSpec: Codable, Sendable, Equatable {
 public enum ElementSpec: Sendable, Equatable {
     case heading(level: Int, text: String, style: String?)
     case paragraph(text: String?, runs: [RunSpec]?, style: String?, alignment: String?)
-    case bulletList(items: [String])
-    case numberedList(items: [String])
+    case bulletList(items: [DocxListItem])
+    case numberedList(items: [DocxListItem])
     case table(headers: [String]?, rows: [[String]], style: String?, columnWidths: [Int]?)
     case image(path: String, width: Int?, height: Int?, caption: String?)
     case pageBreak
@@ -135,11 +139,11 @@ extension ElementSpec: Codable {
             self = .paragraph(text: text, runs: runs, style: style, alignment: alignment)
 
         case "bullet_list":
-            let items = try container.decode([String].self, forKey: .items)
+            let items = try container.decode([DocxListItem].self, forKey: .items)
             self = .bulletList(items: items)
 
         case "numbered_list":
-            let items = try container.decode([String].self, forKey: .items)
+            let items = try container.decode([DocxListItem].self, forKey: .items)
             self = .numberedList(items: items)
 
         case "table":
@@ -369,7 +373,8 @@ extension RunSpec {
             underline: underline,
             fontSize: fontSize,
             fontFamily: fontFamily,
-            color: color
+            color: color,
+            link: link
         )
     }
 }

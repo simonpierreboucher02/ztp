@@ -170,6 +170,30 @@ public struct MessageValidator: Sendable {
             ))
         }
 
+        // SMS-specific checks: single-segment limit + recipients must be phones.
+        let isSMS = (spec.message.channel ?? "imessage") == "sms"
+        if isSMS {
+            let content = spec.message.body.content
+            let unicode = content.unicodeScalars.contains { $0.value > 127 }
+            let limit = unicode ? 70 : 160   // single GSM-7 / UCS-2 segment
+            if content.count > limit {
+                let segments = Int((Double(content.count) / Double(unicode ? 67 : 153)).rounded(.up))
+                warnings.append(ValidationWarning(
+                    code: "SMS_MULTIPART",
+                    message: "SMS body is \(content.count) chars — exceeds one \(limit)-char segment (~\(segments) segments will be sent)"
+                ))
+            }
+            for (index, recipient) in spec.message.to.enumerated() {
+                let addr = recipient.address.trimmingCharacters(in: .whitespaces)
+                if addr.contains("@") {
+                    warnings.append(ValidationWarning(
+                        code: "SMS_EMAIL_RECIPIENT",
+                        message: "Recipient \(index) (\(addr)) looks like an email but channel is SMS — SMS needs a phone number"
+                    ))
+                }
+            }
+        }
+
         return ValidationResult(valid: errors.isEmpty, errors: errors, warnings: warnings)
     }
 

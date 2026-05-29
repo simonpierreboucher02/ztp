@@ -49,6 +49,37 @@ public struct ChartEngine: Sendable {
     /// 3. Generates drawing commands for the chart type.
     /// 4. Routes to the appropriate renderer (SVG, PNG, PDF).
     /// 5. Returns rendered data with metadata.
+    /// Build a linear scale that honours an axis spec's explicit `min`/`max`
+    /// (previously these fields were silently ignored). When only one bound is
+    /// given the other comes from the auto-fitted domain.
+    static func boundedScale(values: [Double], axis: AxisSpec?) -> LinearScale {
+        let auto = LinearScale(values: values)
+        guard axis?.min != nil || axis?.max != nil else { return auto }
+        let lo = axis?.min ?? auto.domainMin
+        var hi = axis?.max ?? auto.domainMax
+        if hi <= lo { hi = lo + 1 }
+        return LinearScale(min: lo, max: hi)
+    }
+
+    /// Build the appropriate scale for an axis: a base-10 log scale when the
+    /// axis declares `"type": "log"` and all values are positive, otherwise a
+    /// linear scale honouring any explicit `min`/`max`.
+    static func makeScale(values: [Double], axis: AxisSpec?) -> any ChartScale {
+        if axis?.type?.lowercased() == "log" {
+            // Log requires a strictly-positive domain; any non-positive value
+            // (or min bound) means a log axis is inappropriate → use linear.
+            let allPositive = !values.isEmpty && values.allSatisfy { $0 > 0 }
+            let minBoundOK = (axis?.min ?? 1) > 0
+            if allPositive && minBoundOK {
+                if let mn = axis?.min, let mx = axis?.max, mx > mn {
+                    return LogScale(min: mn, max: mx)
+                }
+                return LogScale(values: values)
+            }
+        }
+        return boundedScale(values: values, axis: axis)
+    }
+
     public static func build(
         spec: ChartSpec,
         basePath: String?,
@@ -198,8 +229,8 @@ public struct ChartEngine: Sendable {
             }
         }
 
-        let xScale = LinearScale(values: xValues)
-        let yScale = LinearScale(values: allYValues)
+        let xScale = makeScale(values: xValues, axis: spec.x)
+        let yScale = makeScale(values: allYValues, axis: spec.y)
 
         // Grid
         if spec.grid ?? false {
@@ -260,7 +291,17 @@ public struct ChartEngine: Sendable {
                 allYValues.append(contentsOf: vals)
             }
         }
-        let yScale = LinearScale(values: allYValues)
+        // Stacked bars need the y-domain to cover per-category cumulative sums.
+        if spec.stacked ?? false {
+            let perSeries = seriesList.map { dataSet.numericValues(for: $0.field) ?? [] }
+            let catCount = perSeries.map(\.count).max() ?? 0
+            var sums: [Double] = []
+            for i in 0..<catCount {
+                sums.append(perSeries.reduce(0) { $0 + (i < $1.count ? $1[i] : 0) })
+            }
+            allYValues = sums + [0]
+        }
+        let yScale = makeScale(values: allYValues, axis: spec.y)
 
         // Grid
         if spec.grid ?? false {
@@ -287,7 +328,9 @@ public struct ChartEngine: Sendable {
             xScale: xScale,
             yScale: yScale,
             layout: layout.plotArea,
-            theme: theme
+            theme: theme,
+            stacked: spec.stacked ?? false,
+            dataLabels: spec.dataLabels ?? false
         ))
 
         let pointCount = categories.count * seriesList.count
@@ -321,8 +364,8 @@ public struct ChartEngine: Sendable {
             }
         }
 
-        let xScale = LinearScale(values: xValues)
-        let yScale = LinearScale(values: allYValues)
+        let xScale = makeScale(values: xValues, axis: spec.x)
+        let yScale = makeScale(values: allYValues, axis: spec.y)
 
         // Grid
         if spec.grid ?? false {
@@ -396,8 +439,8 @@ public struct ChartEngine: Sendable {
             }
         }
 
-        let xScale = LinearScale(values: xValues)
-        let yScale = LinearScale(values: allYValues)
+        let xScale = makeScale(values: xValues, axis: spec.x)
+        let yScale = makeScale(values: allYValues, axis: spec.y)
 
         // Grid
         if spec.grid ?? false {

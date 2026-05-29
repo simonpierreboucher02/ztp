@@ -103,23 +103,59 @@ public struct DocxPackager: Sendable {
 
         let hasImages = !imagePaths.isEmpty
 
+        // 2b. Header / footer: the first section that defines them wins
+        // (the document is rendered as a single section).
+        let headerText = document.sections.compactMap(\.header).first(where: { !$0.isEmpty })
+        let footerText = document.sections.compactMap(\.footer).first(where: { !$0.isEmpty })
+        let hasHeader = headerText != nil
+        let hasFooter = footerText != nil
+        let headerRelId = hasHeader ? "rIdHeader1" : nil
+        let footerRelId = hasFooter ? "rIdFooter1" : nil
+
+        // 2c. Collect hyperlink targets from paragraph runs (unique, in order).
+        var linkURLs: [String] = []
+        for element in allElements {
+            if case let .paragraph(runs, _, _) = element {
+                for run in runs {
+                    if let url = run.link, !url.isEmpty, !linkURLs.contains(url) {
+                        linkURLs.append(url)
+                    }
+                }
+            }
+        }
+        var hyperlinkRelationships: [String: String] = [:]   // url -> rId
+        var hyperlinkRelsForDoc: [(rId: String, target: String)] = []
+        for (i, url) in linkURLs.enumerated() {
+            let rId = "rIdLink\(i + 1)"
+            hyperlinkRelationships[url] = rId
+            hyperlinkRelsForDoc.append((rId: rId, target: url))
+        }
+
         // 3. Generate all XML content
         let contentTypesXML = DocxContentTypes.toXML(
             hasImages: hasImages,
-            imageExtensions: imageExtensions
+            imageExtensions: imageExtensions,
+            hasHeader: hasHeader,
+            hasFooter: hasFooter
         )
 
         let rootRelsXML = DocxRelsWriter.rootRelsXML()
 
         let documentRelsXML = DocxRelsWriter.documentRelsXML(
             imageRelationships: imageRelsForDoc,
-            hasNumbering: hasNumbering
+            hasNumbering: hasNumbering,
+            headerRelId: headerRelId,
+            footerRelId: footerRelId,
+            hyperlinks: hyperlinkRelsForDoc
         )
 
         let documentXML = DocumentWriter.toXML(
             document: document,
             styleRegistry: styleRegistry,
-            imageRelationships: imageRelationships
+            imageRelationships: imageRelationships,
+            headerRelId: headerRelId,
+            footerRelId: footerRelId,
+            hyperlinkRelationships: hyperlinkRelationships
         )
 
         let stylesXML = DocxStylesWriter.toXML(registry: styleRegistry)
@@ -152,6 +188,16 @@ public struct DocxPackager: Sendable {
         if hasNumbering {
             let numberingXML = NumberingWriter.toXML()
             try addXMLEntry("word/numbering.xml", numberingXML)
+        }
+
+        if let headerText {
+            try addXMLEntry("word/header1.xml", HeaderFooterWriter.headerXML(text: headerText))
+        }
+        if let footerText {
+            // A footer literal may include "{page}" to place a page number,
+            // or page numbering is auto-appended when the footer mentions it.
+            let wantsPage = footerText.lowercased().contains("page")
+            try addXMLEntry("word/footer1.xml", HeaderFooterWriter.footerXML(text: footerText, pageNumbers: wantsPage))
         }
 
         // Add image file entries

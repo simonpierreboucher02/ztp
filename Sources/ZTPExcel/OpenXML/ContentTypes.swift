@@ -13,7 +13,7 @@ struct ContentTypesWriter: Sendable {
     ///   - sheetCount: The number of worksheets in the package.
     ///   - hasSharedStrings: Whether a shared strings part is included.
     /// - Returns: The complete XML string.
-    static func toXML(sheetCount: Int, hasSharedStrings: Bool) -> String {
+    static func toXML(sheetCount: Int, hasSharedStrings: Bool, commentSheetNumbers: [Int] = []) -> String {
         let ns = "http://schemas.openxmlformats.org/package/2006/content-types"
 
         var xml = "<?xml version=\"1.0\" encoding=\"UTF-8\" standalone=\"yes\"?>\n"
@@ -22,6 +22,9 @@ struct ContentTypesWriter: Sendable {
         // Default extensions
         xml += "<Default Extension=\"rels\" ContentType=\"application/vnd.openxmlformats-package.relationships+xml\"/>"
         xml += "<Default Extension=\"xml\" ContentType=\"application/xml\"/>"
+        if !commentSheetNumbers.isEmpty {
+            xml += "<Default Extension=\"vml\" ContentType=\"application/vnd.openxmlformats-officedocument.vmlDrawing\"/>"
+        }
 
         // Workbook
         xml += "<Override PartName=\"/xl/workbook.xml\""
@@ -41,6 +44,12 @@ struct ContentTypesWriter: Sendable {
         if hasSharedStrings {
             xml += "<Override PartName=\"/xl/sharedStrings.xml\""
             xml += " ContentType=\"application/vnd.openxmlformats-officedocument.spreadsheetml.sharedStrings+xml\"/>"
+        }
+
+        // Comments
+        for n in commentSheetNumbers {
+            xml += "<Override PartName=\"/xl/comments\(n).xml\""
+            xml += " ContentType=\"application/vnd.openxmlformats-officedocument.spreadsheetml.comments+xml\"/>"
         }
 
         // Core properties

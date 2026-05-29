@@ -97,6 +97,24 @@ public struct AttachmentSpec: Codable, Sendable, Equatable {
     }
 }
 
+// MARK: - InlineImageSpec
+
+/// An image embedded in the HTML body, referenced as `cid:<cid>`.
+public struct InlineImageSpec: Codable, Sendable, Equatable {
+    public let path: String
+    public let cid: String
+    public let mimeType: String?
+
+    private enum CodingKeys: String, CodingKey {
+        case path, cid
+        case mimeType = "mime_type"
+    }
+
+    public func toInlineImage() -> MailInlineImage {
+        MailInlineImage(path: path, cid: cid, mimeType: mimeType)
+    }
+}
+
 // MARK: - MessageSpec
 
 public struct MessageSpec: Codable, Sendable, Equatable {
@@ -109,6 +127,12 @@ public struct MessageSpec: Codable, Sendable, Equatable {
     public let body: BodySpec
     public let attachments: [AttachmentSpec]?
     public let signature: String?
+    /// Priority: "high", "normal", or "low".
+    public let priority: String?
+    /// Arbitrary additional headers.
+    public let headers: [String: String]?
+    /// Inline images embedded in the HTML body.
+    public let inlineImages: [InlineImageSpec]?
 
     public init(
         from: RecipientSpec? = nil,
@@ -119,7 +143,10 @@ public struct MessageSpec: Codable, Sendable, Equatable {
         subject: String,
         body: BodySpec,
         attachments: [AttachmentSpec]? = nil,
-        signature: String? = nil
+        signature: String? = nil,
+        priority: String? = nil,
+        headers: [String: String]? = nil,
+        inlineImages: [InlineImageSpec]? = nil
     ) {
         self.from = from
         self.to = to
@@ -130,6 +157,9 @@ public struct MessageSpec: Codable, Sendable, Equatable {
         self.body = body
         self.attachments = attachments
         self.signature = signature
+        self.priority = priority
+        self.headers = headers
+        self.inlineImages = inlineImages
     }
 
     private enum CodingKeys: String, CodingKey {
@@ -142,6 +172,9 @@ public struct MessageSpec: Codable, Sendable, Equatable {
         case body
         case attachments
         case signature
+        case priority
+        case headers
+        case inlineImages = "inline_images"
     }
 }
 
@@ -246,7 +279,10 @@ public struct MailSpec: Codable, Sendable, Equatable {
             body: message.body.toMailBody(),
             attachments: attachments,
             replyTo: replyToAddress,
-            signature: message.signature
+            signature: message.signature,
+            priority: message.priority,
+            customHeaders: message.headers ?? [:],
+            inlineImages: (message.inlineImages ?? []).map { $0.toInlineImage() }
         )
     }
 }

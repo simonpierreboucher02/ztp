@@ -55,11 +55,14 @@ public struct PresentationMeta: Codable, Sendable, Equatable {
     public let title: String?
     public let author: String?
     public let size: String?
+    /// Render a slide-number badge on each slide.
+    public let slideNumbers: Bool?
 
-    public init(title: String? = nil, author: String? = nil, size: String? = nil) {
+    public init(title: String? = nil, author: String? = nil, size: String? = nil, slideNumbers: Bool? = nil) {
         self.title = title
         self.author = author
         self.size = size
+        self.slideNumbers = slideNumbers
     }
 }
 
@@ -107,6 +110,8 @@ public struct SlideSpec: Codable, Sendable, Equatable {
     public let content: [ContentSpec]?
     public let table: TableContentSpec?
     public let notes: String?
+    /// Slide transition: fade, push, wipe, cut, split, cover, zoom.
+    public let transition: String?
 
     public init(
         layout: String? = nil,
@@ -114,7 +119,8 @@ public struct SlideSpec: Codable, Sendable, Equatable {
         subtitle: String? = nil,
         content: [ContentSpec]? = nil,
         table: TableContentSpec? = nil,
-        notes: String? = nil
+        notes: String? = nil,
+        transition: String? = nil
     ) {
         self.layout = layout
         self.title = title
@@ -122,6 +128,7 @@ public struct SlideSpec: Codable, Sendable, Equatable {
         self.content = content
         self.table = table
         self.notes = notes
+        self.transition = transition
     }
 }
 
@@ -334,7 +341,8 @@ extension PresentationSpec {
             author: presentation?.author,
             size: slideSize,
             theme: resolvedTheme,
-            slides: convertedSlides
+            slides: convertedSlides,
+            showSlideNumbers: presentation?.slideNumbers ?? false
         )
     }
 
@@ -375,7 +383,8 @@ extension PresentationSpec {
             title: spec.title,
             subtitle: spec.subtitle,
             content: elements,
-            notes: spec.notes
+            notes: spec.notes,
+            transition: spec.transition
         )
     }
 

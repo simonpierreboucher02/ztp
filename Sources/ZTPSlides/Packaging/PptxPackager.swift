@@ -90,6 +90,7 @@ public struct PptxPackager: Sendable {
         var slideXMLs: [String] = []
         var slideRelsXMLs: [String] = []
         var slideImageEntries: [[SlidesZIPWriter.Entry]] = []
+        var notesSlideNumbers: [Int] = []   // 1-based slide indices that have speaker notes
 
         for (slideIdx, slide) in presentation.slides.enumerated() {
             // Collect image paths used in this slide (in order, unique)
@@ -123,12 +124,16 @@ public struct PptxPackager: Sendable {
                 slideIndex: slideIdx,
                 theme: presentation.theme,
                 size: presentation.size,
-                imageRelationships: imageRelationships
+                imageRelationships: imageRelationships,
+                showSlideNumber: presentation.showSlideNumbers
             )
             slideXMLs.append(slideXML)
 
+            let slideHasNotes = (slide.notes?.isEmpty == false)
+            if slideHasNotes { notesSlideNumbers.append(slideIdx + 1) }
             let slideRelsXML = SlidesRelsWriter.slideRelsXML(
-                imageRelationships: imageRelsForSlide
+                imageRelationships: imageRelsForSlide,
+                notesSlideNumber: slideHasNotes ? (slideIdx + 1) : nil
             )
             slideRelsXMLs.append(slideRelsXML)
             slideImageEntries.append(imgEntries)
@@ -136,21 +141,26 @@ public struct PptxPackager: Sendable {
 
         // ---- 3. Generate all other XML parts ----
 
+        let hasNotes = !notesSlideNumbers.isEmpty
+
         let contentTypesXML = SlidesContentTypes.toXML(
             slideCount: slideCount,
             hasImages: hasImages,
-            imageExtensions: imageExtensions
+            imageExtensions: imageExtensions,
+            notesSlideNumbers: notesSlideNumbers
         )
 
         let rootRelsXML = SlidesRelsWriter.rootRelsXML()
 
         let presentationXML = PresentationWriter.toXML(
             slideCount: slideCount,
-            size: presentation.size
+            size: presentation.size,
+            notesMasterRelId: hasNotes ? SlidesRelsWriter.notesMasterRelId(slideCount: slideCount) : nil
         )
 
         let presentationRelsXML = SlidesRelsWriter.presentationRelsXML(
-            slideCount: slideCount
+            slideCount: slideCount,
+            hasNotes: hasNotes
         )
 
         let themeXML = ThemeWriter.toXML(theme: presentation.theme)
@@ -193,6 +203,18 @@ public struct PptxPackager: Sendable {
         for i in 0..<slideCount {
             try addXMLEntry("ppt/slides/slide\(i + 1).xml", slideXMLs[i])
             try addXMLEntry("ppt/slides/_rels/slide\(i + 1).xml.rels", slideRelsXMLs[i])
+        }
+
+        // Speaker notes: a shared notes master + one notesSlide per slide that
+        // has notes (previously the `notes` field was silently dropped).
+        if hasNotes {
+            try addXMLEntry("ppt/notesMasters/notesMaster1.xml", NotesWriter.notesMasterXML())
+            try addXMLEntry("ppt/notesMasters/_rels/notesMaster1.xml.rels", NotesWriter.notesMasterRelsXML())
+            for n in notesSlideNumbers {
+                let text = presentation.slides[n - 1].notes ?? ""
+                try addXMLEntry("ppt/notesSlides/notesSlide\(n).xml", NotesWriter.notesSlideXML(text: text))
+                try addXMLEntry("ppt/notesSlides/_rels/notesSlide\(n).xml.rels", NotesWriter.notesSlideRelsXML(slideNumber: n))
+            }
         }
 
         // Image media files (each unique image once)

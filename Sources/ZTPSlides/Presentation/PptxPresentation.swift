@@ -12,19 +12,23 @@ public struct PptxPresentation: Sendable {
     public let theme: PptxTheme
     /// The ordered list of slides.
     public let slides: [PptxSlide]
+    /// Whether to render a slide-number badge on each slide.
+    public let showSlideNumbers: Bool
 
     public init(
         title: String? = nil,
         author: String? = nil,
         size: SlideSize = .widescreen,
         theme: PptxTheme = .defaultTheme,
-        slides: [PptxSlide]
+        slides: [PptxSlide],
+        showSlideNumbers: Bool = false
     ) {
         self.title = title
         self.author = author
         self.size = size
         self.theme = theme
         self.slides = slides
+        self.showSlideNumbers = showSlideNumbers
     }
 
     /// Total number of slides.

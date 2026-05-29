@@ -6,7 +6,7 @@ public struct AxisRenderer: Sendable {
 
     /// Renders Y-axis line, tick marks, tick labels, and optional axis label.
     public static func renderYAxis(
-        scale: LinearScale,
+        scale: any ChartScale,
         layout: PlotArea,
         theme: ChartTheme,
         label: String?,
@@ -75,7 +75,7 @@ public struct AxisRenderer: Sendable {
 
     /// Renders X-axis with a linear (numeric) scale.
     public static func renderXAxisNumeric(
-        scale: LinearScale,
+        scale: any ChartScale,
         layout: PlotArea,
         theme: ChartTheme,
         label: String?,
@@ -210,7 +210,7 @@ public struct AxisRenderer: Sendable {
 
     /// Renders horizontal grid lines at each Y tick value.
     public static func renderGrid(
-        yScale: LinearScale,
+        yScale: any ChartScale,
         layout: PlotArea,
         theme: ChartTheme,
         tickCount: Int

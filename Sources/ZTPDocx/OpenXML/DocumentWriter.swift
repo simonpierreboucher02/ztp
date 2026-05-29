@@ -20,7 +20,10 @@ public struct DocumentWriter: Sendable {
     public static func toXML(
         document: DocxDocument,
         styleRegistry: DocxStyleRegistry,
-        imageRelationships: [String: String]
+        imageRelationships: [String: String],
+        headerRelId: String? = nil,
+        footerRelId: String? = nil,
+        hyperlinkRelationships: [String: String] = [:]
     ) -> String {
         var xml = "<?xml version=\"1.0\" encoding=\"UTF-8\" standalone=\"yes\"?>\n"
         xml += "<w:document"
@@ -39,12 +42,24 @@ public struct DocumentWriter: Sendable {
                     element,
                     styleRegistry: styleRegistry,
                     imageRelationships: imageRelationships,
-                    imageCounter: &imageCounter
+                    imageCounter: &imageCounter,
+                    hyperlinks: hyperlinkRelationships
                 )
             }
         }
 
-        xml += "    <w:sectPr/>\n"
+        if headerRelId != nil || footerRelId != nil {
+            xml += "    <w:sectPr>\n"
+            if let h = headerRelId {
+                xml += "      <w:headerReference w:type=\"default\" r:id=\"\(h)\"/>\n"
+            }
+            if let f = footerRelId {
+                xml += "      <w:footerReference w:type=\"default\" r:id=\"\(f)\"/>\n"
+            }
+            xml += "    </w:sectPr>\n"
+        } else {
+            xml += "    <w:sectPr/>\n"
+        }
         xml += "  </w:body>\n"
         xml += "</w:document>"
         return xml
@@ -56,14 +71,15 @@ public struct DocumentWriter: Sendable {
         _ element: DocxElement,
         styleRegistry: DocxStyleRegistry,
         imageRelationships: [String: String],
-        imageCounter: inout Int
+        imageCounter: inout Int,
+        hyperlinks: [String: String] = [:]
     ) -> String {
         switch element {
         case let .heading(level, text, style):
             return renderHeading(level: level, text: text, style: style, styleRegistry: styleRegistry)
 
         case let .paragraph(runs, style, alignment):
-            return renderParagraph(runs: runs, style: style, alignment: alignment, styleRegistry: styleRegistry)
+            return renderParagraph(runs: runs, style: style, alignment: alignment, styleRegistry: styleRegistry, hyperlinks: hyperlinks)
 
         case let .bulletList(items):
             return renderListItems(items, numId: "1")
@@ -122,7 +138,8 @@ public struct DocumentWriter: Sendable {
         runs: [DocxRun],
         style: String?,
         alignment: ParagraphAlignment?,
-        styleRegistry: DocxStyleRegistry
+        styleRegistry: DocxStyleRegistry,
+        hyperlinks: [String: String] = [:]
     ) -> String {
         var xml = "    <w:p>\n"
 
@@ -145,7 +162,7 @@ public struct DocumentWriter: Sendable {
 
         // Runs
         for run in runs {
-            xml += renderRun(run, resolvedStyle: hasPPr ? nil : resolvedStyle)
+            xml += renderRun(run, resolvedStyle: hasPPr ? nil : resolvedStyle, hyperlinks: hyperlinks)
         }
 
         xml += "    </w:p>\n"
@@ -154,7 +171,7 @@ public struct DocumentWriter: Sendable {
 
     // MARK: - Run
 
-    private static func renderRun(_ run: DocxRun, resolvedStyle: DocxStyle?) -> String {
+    private static func renderRun(_ run: DocxRun, resolvedStyle: DocxStyle?, hyperlinks: [String: String] = [:]) -> String {
         let escapedText = DocxXMLEscaping.escape(run.text)
 
         var rPr = ""
@@ -195,27 +212,43 @@ public struct DocumentWriter: Sendable {
             hasFormatting = true
         }
 
+        // Hyperlink runs get the Hyperlink character style (blue + underline)
+        // unless the run already specifies a color.
+        let isLink = run.link != nil && hyperlinks[run.link!] != nil
+        if isLink {
+            if run.color == nil { parts.append("<w:color w:val=\"0563C1\"/>") }
+            if run.underline != true { parts.append("<w:u w:val=\"single\"/>") }
+            hasFormatting = true
+        }
+
         if hasFormatting {
             rPr = "<w:rPr>" + parts.joined() + "</w:rPr>"
         }
 
+        let runXML: String
         if rPr.isEmpty {
-            return "      <w:r><w:t xml:space=\"preserve\">\(escapedText)</w:t></w:r>\n"
+            runXML = "<w:r><w:t xml:space=\"preserve\">\(escapedText)</w:t></w:r>"
         } else {
-            return "      <w:r>\(rPr)<w:t xml:space=\"preserve\">\(escapedText)</w:t></w:r>\n"
+            runXML = "<w:r>\(rPr)<w:t xml:space=\"preserve\">\(escapedText)</w:t></w:r>"
         }
+
+        if isLink, let rId = hyperlinks[run.link!] {
+            return "      <w:hyperlink r:id=\"\(DocxXMLEscaping.escape(rId))\">\(runXML)</w:hyperlink>\n"
+        }
+        return "      \(runXML)\n"
     }
 
     // MARK: - List Items
 
-    private static func renderListItems(_ items: [String], numId: String) -> String {
+    private static func renderListItems(_ items: [DocxListItem], numId: String) -> String {
         var xml = ""
         for item in items {
-            let escapedItem = DocxXMLEscaping.escape(item)
+            let escapedItem = DocxXMLEscaping.escape(item.text)
+            let ilvl = max(0, min(item.level, 8))
             xml += "    <w:p>\n"
             xml += "      <w:pPr>\n"
             xml += "        <w:pStyle w:val=\"ListParagraph\"/>\n"
-            xml += "        <w:numPr><w:ilvl w:val=\"0\"/><w:numId w:val=\"\(numId)\"/></w:numPr>\n"
+            xml += "        <w:numPr><w:ilvl w:val=\"\(ilvl)\"/><w:numId w:val=\"\(numId)\"/></w:numPr>\n"
             xml += "      </w:pPr>\n"
             xml += "      <w:r><w:t xml:space=\"preserve\">\(escapedItem)</w:t></w:r>\n"
             xml += "    </w:p>\n"

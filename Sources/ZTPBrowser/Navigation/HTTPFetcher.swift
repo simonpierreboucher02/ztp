@@ -26,13 +26,13 @@ public struct HTTPFetcher: Sendable {
         case decodingError(String)
     }
 
-    public static func fetch(url: URL, timeoutMs: Int = 10000) async throws -> FetchResult {
+    public static func fetch(url: URL, timeoutMs: Int = 10000, headers: [String: String] = [:]) async throws -> FetchResult {
         let config = URLSessionConfiguration.ephemeral
         config.timeoutIntervalForRequest = TimeInterval(timeoutMs) / 1000.0
         config.timeoutIntervalForResource = TimeInterval(timeoutMs) / 1000.0
-        config.httpAdditionalHeaders = [
-            "User-Agent": "ZTPBrowser/0.1 (macOS)"
-        ]
+        var allHeaders: [AnyHashable: Any] = ["User-Agent": "ZTPBrowser/0.1 (macOS)"]
+        for (k, v) in headers { allHeaders[k] = v }   // caller headers override the default UA
+        config.httpAdditionalHeaders = allHeaders
 
         let session = URLSession(configuration: config)
         defer { session.invalidateAndCancel() }

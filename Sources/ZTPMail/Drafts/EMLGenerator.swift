@@ -46,6 +46,34 @@ public struct EMLGenerator: Sendable {
         let messageId = "<\(UUID().uuidString.lowercased())@ztp.local>"
         lines.append("Message-ID: \(messageId)")
 
+        // Priority headers
+        switch message.priority?.lowercased() {
+        case "high":
+            lines.append("X-Priority: 1 (Highest)")
+            lines.append("Importance: High")
+        case "low":
+            lines.append("X-Priority: 5 (Lowest)")
+            lines.append("Importance: Low")
+        default:
+            break
+        }
+
+        // Custom headers (skip reserved ones; strip CR/LF to block injection)
+        let reserved: Set<String> = ["from", "to", "cc", "bcc", "reply-to", "subject",
+                                     "date", "mime-version", "message-id", "content-type",
+                                     "content-transfer-encoding", "x-priority", "importance"]
+        for key in message.customHeaders.keys.sorted() {
+            guard !reserved.contains(key.lowercased()) else { continue }
+            let value = message.customHeaders[key]!
+                .replacingOccurrences(of: "\r", with: " ")
+                .replacingOccurrences(of: "\n", with: " ")
+            let safeKey = key
+                .replacingOccurrences(of: "\r", with: "")
+                .replacingOccurrences(of: "\n", with: "")
+                .replacingOccurrences(of: ":", with: "")
+            lines.append("\(safeKey): \(value)")
+        }
+
         // --- Render body parts ---
 
         let plainText = PlainTextRenderer.render(body: message.body, signature: message.signature)
@@ -57,20 +85,16 @@ public struct EMLGenerator: Sendable {
         // --- Build MIME body ---
 
         let hasAttachments = !message.attachments.isEmpty
-        let altBoundary = "ztp-alt-\(UUID().uuidString.lowercased())"
 
         if hasAttachments {
             let mixedBoundary = "ztp-mixed-\(UUID().uuidString.lowercased())"
             lines.append("Content-Type: multipart/mixed; boundary=\"\(mixedBoundary)\"")
             lines.append("")
 
-            // Alternative part (plain + HTML)
+            // Main content (alternative, optionally wrapped in related for inline images)
             lines.append("--\(mixedBoundary)")
-            lines.append("Content-Type: multipart/alternative; boundary=\"\(altBoundary)\"")
-            lines.append("")
-
-            appendAlternativeParts(&lines, altBoundary: altBoundary,
-                                   plainEncoded: plainEncoded, htmlEncoded: htmlEncoded)
+            try appendMainContent(&lines, plainEncoded: plainEncoded, htmlEncoded: htmlEncoded,
+                                  inlineImages: message.inlineImages, basePath: basePath)
 
             // Attachment parts
             for attachment in message.attachments {
@@ -89,12 +113,9 @@ public struct EMLGenerator: Sendable {
 
             lines.append("--\(mixedBoundary)--")
         } else {
-            // No attachments: multipart/alternative as top-level
-            lines.append("Content-Type: multipart/alternative; boundary=\"\(altBoundary)\"")
-            lines.append("")
-
-            appendAlternativeParts(&lines, altBoundary: altBoundary,
-                                   plainEncoded: plainEncoded, htmlEncoded: htmlEncoded)
+            // No attachments: the main content is the top-level body.
+            try appendMainContent(&lines, plainEncoded: plainEncoded, htmlEncoded: htmlEncoded,
+                                  inlineImages: message.inlineImages, basePath: basePath)
         }
 
         let emlString = lines.joined(separator: "\r\n")
@@ -105,6 +126,59 @@ public struct EMLGenerator: Sendable {
     }
 
     // MARK: - Private Helpers
+
+    /// Emits a `Content-Type:` header line followed by the body block. When
+    /// inline images are present, the alternative block is wrapped in a
+    /// `multipart/related` so `<img src="cid:...">` references resolve.
+    private static func appendMainContent(
+        _ lines: inout [String],
+        plainEncoded: String,
+        htmlEncoded: String,
+        inlineImages: [MailInlineImage],
+        basePath: String?
+    ) throws {
+        let altBoundary = "ztp-alt-\(UUID().uuidString.lowercased())"
+
+        guard !inlineImages.isEmpty else {
+            lines.append("Content-Type: multipart/alternative; boundary=\"\(altBoundary)\"")
+            lines.append("")
+            appendAlternativeParts(&lines, altBoundary: altBoundary,
+                                   plainEncoded: plainEncoded, htmlEncoded: htmlEncoded)
+            return
+        }
+
+        let relBoundary = "ztp-rel-\(UUID().uuidString.lowercased())"
+        lines.append("Content-Type: multipart/related; boundary=\"\(relBoundary)\"")
+        lines.append("")
+
+        // The alternative (plain + HTML) as the root of the related part.
+        lines.append("--\(relBoundary)")
+        lines.append("Content-Type: multipart/alternative; boundary=\"\(altBoundary)\"")
+        lines.append("")
+        appendAlternativeParts(&lines, altBoundary: altBoundary,
+                               plainEncoded: plainEncoded, htmlEncoded: htmlEncoded)
+
+        // Inline image parts.
+        for image in inlineImages {
+            let data = try readImageData(path: image.path, basePath: basePath)
+            let mime = image.mimeType ?? MailAttachment.detectMIME(for: image.path)
+            let cid = image.cid.trimmingCharacters(in: CharacterSet(charactersIn: "<>"))
+            lines.append("--\(relBoundary)")
+            lines.append("Content-Type: \(mime)")
+            lines.append("Content-Transfer-Encoding: base64")
+            lines.append("Content-ID: <\(cid)>")
+            lines.append("Content-Disposition: inline; filename=\"\((image.path as NSString).lastPathComponent)\"")
+            lines.append("")
+            lines.append(Base64LineEncoder.encode(data))
+            lines.append("")
+        }
+        lines.append("--\(relBoundary)--")
+    }
+
+    /// Resolve + read an inline image file (same resolution rules as attachments).
+    private static func readImageData(path: String, basePath: String?) throws -> Data {
+        try readAttachmentData(attachment: MailAttachment(path: path), basePath: basePath)
+    }
 
     private static func appendAlternativeParts(
         _ lines: inout [String],

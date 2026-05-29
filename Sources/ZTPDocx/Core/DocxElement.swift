@@ -13,13 +13,53 @@ public enum ParagraphAlignment: String, Codable, Sendable, Equatable {
     case both
 }
 
+// MARK: - DocxListItem
+
+/// A list item with an optional nesting level. Decodes from either a plain
+/// string (`"text"`, level 0) or an object (`{"text": "...", "level": 1}`),
+/// so flat lists keep their simple `["a","b"]` form while nested lists can
+/// specify levels.
+public struct DocxListItem: Codable, Sendable, Equatable, ExpressibleByStringLiteral {
+    public let text: String
+    public let level: Int
+
+    public init(text: String, level: Int = 0) {
+        self.text = text
+        self.level = max(0, min(level, 8))
+    }
+
+    /// A bare string literal is a level-0 item, so `["a", "b"]` stays valid.
+    public init(stringLiteral value: String) {
+        self.init(text: value, level: 0)
+    }
+
+    private enum CodingKeys: String, CodingKey { case text, level }
+
+    public init(from decoder: Decoder) throws {
+        if let single = try? decoder.singleValueContainer(), let s = try? single.decode(String.self) {
+            self.init(text: s, level: 0)
+            return
+        }
+        let c = try decoder.container(keyedBy: CodingKeys.self)
+        let t = try c.decode(String.self, forKey: .text)
+        let l = try c.decodeIfPresent(Int.self, forKey: .level) ?? 0
+        self.init(text: t, level: l)
+    }
+
+    public func encode(to encoder: Encoder) throws {
+        var c = encoder.container(keyedBy: CodingKeys.self)
+        try c.encode(text, forKey: .text)
+        try c.encode(level, forKey: .level)
+    }
+}
+
 // MARK: - DocxElement
 
 public enum DocxElement: Sendable, Equatable {
     case heading(level: Int, text: String, style: String?)
     case paragraph(runs: [DocxRun], style: String?, alignment: ParagraphAlignment?)
-    case bulletList(items: [String])
-    case numberedList(items: [String])
+    case bulletList(items: [DocxListItem])
+    case numberedList(items: [DocxListItem])
     case table(DocxTable)
     case image(DocxImage)
     case pageBreak
@@ -68,11 +108,11 @@ extension DocxElement: Codable {
             self = .paragraph(runs: runs, style: style, alignment: alignment)
 
         case .bulletList:
-            let items = try container.decode([String].self, forKey: .items)
+            let items = try container.decode([DocxListItem].self, forKey: .items)
             self = .bulletList(items: items)
 
         case .numberedList:
-            let items = try container.decode([String].self, forKey: .items)
+            let items = try container.decode([DocxListItem].self, forKey: .items)
             self = .numberedList(items: items)
 
         case .table:

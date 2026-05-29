@@ -29,7 +29,10 @@ public struct DocxRelsWriter: Sendable {
     ///     requiring a reference to `numbering.xml`.
     public static func documentRelsXML(
         imageRelationships: [(rId: String, target: String)],
-        hasNumbering: Bool
+        hasNumbering: Bool,
+        headerRelId: String? = nil,
+        footerRelId: String? = nil,
+        hyperlinks: [(rId: String, target: String)] = []
     ) -> String {
         var xml = "<?xml version=\"1.0\" encoding=\"UTF-8\" standalone=\"yes\"?>\n"
         xml += "<Relationships xmlns=\"http://schemas.openxmlformats.org/package/2006/relationships\">\n"
@@ -46,6 +49,19 @@ public struct DocxRelsWriter: Sendable {
         for rel in imageRelationships {
             let escapedTarget = DocxXMLEscaping.escape(rel.target)
             xml += "  <Relationship Id=\"\(DocxXMLEscaping.escape(rel.rId))\" Type=\"http://schemas.openxmlformats.org/officeDocument/2006/relationships/image\" Target=\"\(escapedTarget)\"/>\n"
+        }
+
+        // Header / footer relationships
+        if let h = headerRelId {
+            xml += "  <Relationship Id=\"\(DocxXMLEscaping.escape(h))\" Type=\"http://schemas.openxmlformats.org/officeDocument/2006/relationships/header\" Target=\"header1.xml\"/>\n"
+        }
+        if let f = footerRelId {
+            xml += "  <Relationship Id=\"\(DocxXMLEscaping.escape(f))\" Type=\"http://schemas.openxmlformats.org/officeDocument/2006/relationships/footer\" Target=\"footer1.xml\"/>\n"
+        }
+
+        // External hyperlink relationships
+        for link in hyperlinks {
+            xml += "  <Relationship Id=\"\(DocxXMLEscaping.escape(link.rId))\" Type=\"http://schemas.openxmlformats.org/officeDocument/2006/relationships/hyperlink\" Target=\"\(DocxXMLEscaping.escape(link.target))\" TargetMode=\"External\"/>\n"
         }
 
         xml += "</Relationships>"

@@ -44,12 +44,18 @@ public struct XLSXPackager: Sendable {
 
         let hasSharedStrings = sharedStrings.count > 0
 
+        // Sheets (1-based) that carry comments → need comment + VML parts.
+        let commentSheetNumbers: [Int] = workbook.sheets.enumerated()
+            .filter { !$0.element.comments.isEmpty }
+            .map { $0.offset + 1 }
+
         // ---- Assemble all ZIP entries ----
 
         // [Content_Types].xml
         let contentTypesXML = ContentTypesWriter.toXML(
             sheetCount: sheetCount,
-            hasSharedStrings: hasSharedStrings
+            hasSharedStrings: hasSharedStrings,
+            commentSheetNumbers: commentSheetNumbers
         )
         try entries.append(xmlEntry(path: "[Content_Types].xml", xml: contentTypesXML))
 
@@ -79,6 +85,14 @@ public struct XLSXPackager: Sendable {
                 path: "xl/worksheets/sheet\(i + 1).xml",
                 xml: sheetXML
             ))
+        }
+
+        // Cell comments: per sheet, the comments list + legacy VML + sheet rels.
+        for (i, sheet) in workbook.sheets.enumerated() where !sheet.comments.isEmpty {
+            let n = i + 1
+            try entries.append(xmlEntry(path: "xl/comments\(n).xml", xml: CommentsWriter.commentsXML(sheet.comments)))
+            try entries.append(xmlEntry(path: "xl/drawings/vmlDrawing\(n).vml", xml: CommentsWriter.vmlXML(sheet.comments)))
+            try entries.append(xmlEntry(path: "xl/worksheets/_rels/sheet\(n).xml.rels", xml: CommentsWriter.sheetRelsXML(sheetNumber: n)))
         }
 
         // xl/sharedStrings.xml (only if there are strings)

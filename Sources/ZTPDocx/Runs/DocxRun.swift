@@ -11,6 +11,7 @@ public struct DocxRun: Codable, Sendable, Equatable {
     public var fontSize: Double?
     public var fontFamily: String?
     public var color: String?  // hex e.g. "FF0000"
+    public var link: String?   // optional hyperlink target URL
 
     public init(
         text: String,
@@ -19,7 +20,8 @@ public struct DocxRun: Codable, Sendable, Equatable {
         underline: Bool? = nil,
         fontSize: Double? = nil,
         fontFamily: String? = nil,
-        color: String? = nil
+        color: String? = nil,
+        link: String? = nil
     ) {
         self.text = text
         self.bold = bold
@@ -28,5 +30,6 @@ public struct DocxRun: Codable, Sendable, Equatable {
         self.fontSize = fontSize
         self.fontFamily = fontFamily
         self.color = color
+        self.link = link
     }
 }

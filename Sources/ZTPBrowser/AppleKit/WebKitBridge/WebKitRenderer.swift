@@ -14,12 +14,12 @@ public final class WebKitRenderer: NSObject, @unchecked Sendable {
 
     // MARK: - Public API
 
-    public static func screenshot(url: URL, viewport: Viewport, timeoutMs: Int = 10000) async throws -> Data {
-        try await performScreenshot(url: url, viewport: viewport, timeoutMs: timeoutMs)
+    public static func screenshot(url: URL, viewport: Viewport, timeoutMs: Int = 10000, settleMs: Int = 500) async throws -> Data {
+        try await performScreenshot(url: url, viewport: viewport, timeoutMs: timeoutMs, settleMs: settleMs)
     }
 
-    public static func pdf(url: URL, viewport: Viewport, timeoutMs: Int = 10000) async throws -> Data {
-        try await performPDF(url: url, viewport: viewport, timeoutMs: timeoutMs)
+    public static func pdf(url: URL, viewport: Viewport, timeoutMs: Int = 10000, settleMs: Int = 500) async throws -> Data {
+        try await performPDF(url: url, viewport: viewport, timeoutMs: timeoutMs, settleMs: settleMs)
     }
 
     public static func evaluateJavaScript(url: URL, script: String, timeoutMs: Int = 10000) async throws -> String {
@@ -52,19 +52,19 @@ public final class WebKitRenderer: NSObject, @unchecked Sendable {
     }
 
     @MainActor
-    private static func loadAndWait(webView: WKWebView, url: URL, timeoutMs: Int) async throws {
+    private static func loadAndWait(webView: WKWebView, url: URL, timeoutMs: Int, settleMs: Int) async throws {
         let request = URLRequest(url: url, timeoutInterval: Double(timeoutMs) / 1000.0)
         webView.load(request)
         try await waitForNavigation(webView: webView, timeoutMs: timeoutMs)
-        // Allow a brief rendering settle period
-        try await Task.sleep(for: .milliseconds(500))
+        // Rendering/network settle period (tuned per wait strategy by the caller).
+        try await Task.sleep(for: .milliseconds(max(0, settleMs)))
     }
 
     @MainActor
-    private static func performScreenshot(url: URL, viewport: Viewport, timeoutMs: Int) async throws -> Data {
+    private static func performScreenshot(url: URL, viewport: Viewport, timeoutMs: Int, settleMs: Int = 500) async throws -> Data {
         let webView = createWebView(viewport: viewport, timeoutMs: timeoutMs)
 
-        try await loadAndWait(webView: webView, url: url, timeoutMs: timeoutMs)
+        try await loadAndWait(webView: webView, url: url, timeoutMs: timeoutMs, settleMs: settleMs)
 
         let snapshotConfig = WKSnapshotConfiguration()
         snapshotConfig.snapshotWidth = NSNumber(value: viewport.width)
@@ -86,10 +86,10 @@ public final class WebKitRenderer: NSObject, @unchecked Sendable {
     }
 
     @MainActor
-    private static func performPDF(url: URL, viewport: Viewport, timeoutMs: Int) async throws -> Data {
+    private static func performPDF(url: URL, viewport: Viewport, timeoutMs: Int, settleMs: Int = 500) async throws -> Data {
         let webView = createWebView(viewport: viewport, timeoutMs: timeoutMs)
 
-        try await loadAndWait(webView: webView, url: url, timeoutMs: timeoutMs)
+        try await loadAndWait(webView: webView, url: url, timeoutMs: timeoutMs, settleMs: settleMs)
 
         let pdfConfig = WKPDFConfiguration()
         pdfConfig.rect = CGRect(x: 0, y: 0, width: viewport.width, height: viewport.height)
@@ -109,7 +109,7 @@ public final class WebKitRenderer: NSObject, @unchecked Sendable {
         let viewport = Viewport.desktop
         let webView = createWebView(viewport: viewport, timeoutMs: timeoutMs)
 
-        try await loadAndWait(webView: webView, url: url, timeoutMs: timeoutMs)
+        try await loadAndWait(webView: webView, url: url, timeoutMs: timeoutMs, settleMs: 500)
 
         let result: Any?
         do {

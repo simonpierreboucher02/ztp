@@ -24,7 +24,7 @@ public struct URLValidator: Sendable {
         }
     }
 
-    public static func validate(urlString: String) -> ValidationResult {
+    public static func validate(urlString: String, allowPrivateHosts: Bool = false) -> ValidationResult {
         var errors: [ValidationError] = []
 
         // Check non-empty
@@ -73,20 +73,53 @@ public struct URLValidator: Sendable {
             ))
         }
 
-        // Warn on localhost (warning only — does not invalidate)
-        if let host = url.host?.lowercased(),
-           host == "localhost" || host == "127.0.0.1" || host == "::1" {
-            errors.append(ValidationError(
-                code: "LOCALHOST_WARNING",
-                message: "URL points to localhost, which may not be reachable in production.",
-                hint: "Use a publicly accessible hostname if this is for production use."
-            ))
-            // localhost is a warning, so only invalid if other errors exist
-            let hardErrors = errors.filter { $0.code != "LOCALHOST_WARNING" }
-            return ValidationResult(valid: hardErrors.isEmpty, errors: errors)
+        // SSRF guard: block private / loopback / link-local / reserved hosts
+        // unless explicitly allowed. Secure by default.
+        if let host = url.host?.lowercased(), isBlockedHost(host) {
+            if allowPrivateHosts {
+                errors.append(ValidationError(
+                    code: "PRIVATE_HOST_WARNING",
+                    message: "URL points to a private/loopback host (\(host)).",
+                    hint: "Allowed because private hosts were explicitly permitted."
+                ))
+            } else {
+                errors.append(ValidationError(
+                    code: "BLOCKED_HOST",
+                    message: "URL targets a private, loopback, or reserved host (\(host)) — blocked to prevent SSRF.",
+                    hint: "Pass an explicit allow-private flag only for trusted internal use."
+                ))
+            }
         }
 
-        let valid = errors.isEmpty
-        return ValidationResult(valid: valid, errors: errors)
+        let hardErrors = errors.filter { $0.code.hasSuffix("_WARNING") == false }
+        return ValidationResult(valid: hardErrors.isEmpty, errors: errors)
+    }
+
+    /// Whether a host is private/loopback/link-local/reserved and should be
+    /// blocked by the SSRF guard.
+    static func isBlockedHost(_ host: String) -> Bool {
+        let h = host.lowercased().trimmingCharacters(in: CharacterSet(charactersIn: "[]"))
+        // Hostname-based loopback / metadata.
+        if h == "localhost" || h.hasSuffix(".localhost") { return true }
+        if h == "metadata.google.internal" { return true }
+
+        // IPv6 loopback / unique-local (fc00::/7) / link-local (fe80::/10).
+        if h == "::1" || h == "::" { return true }
+        if h.hasPrefix("fc") || h.hasPrefix("fd") || h.hasPrefix("fe8") || h.hasPrefix("fe9")
+            || h.hasPrefix("fea") || h.hasPrefix("feb") { return true }
+
+        // IPv4 literal ranges.
+        let parts = h.split(separator: ".")
+        if parts.count == 4, let a = Int(parts[0]), let b = Int(parts[1]),
+           parts[2].allSatisfy(\.isNumber), parts[3].allSatisfy(\.isNumber) {
+            if a == 10 { return true }                          // 10.0.0.0/8
+            if a == 127 { return true }                         // loopback
+            if a == 0 { return true }                           // 0.0.0.0/8
+            if a == 172, (16...31).contains(b) { return true }  // 172.16.0.0/12
+            if a == 192, b == 168 { return true }               // 192.168.0.0/16
+            if a == 169, b == 254 { return true }               // link-local + 169.254.169.254 metadata
+            if a == 100, (64...127).contains(b) { return true }  // CGNAT 100.64.0.0/10
+        }
+        return false
     }
 }

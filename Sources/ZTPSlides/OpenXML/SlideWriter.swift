@@ -61,7 +61,8 @@ public struct SlideWriter: Sendable {
         slideIndex: Int,
         theme: PptxTheme,
         size: SlideSize,
-        imageRelationships: [String: String]
+        imageRelationships: [String: String],
+        showSlideNumber: Bool = false
     ) -> String {
         var xml = "<?xml version=\"1.0\" encoding=\"UTF-8\" standalone=\"yes\"?>\n"
         xml += "<p:sld"
@@ -325,9 +326,50 @@ public struct SlideWriter: Sendable {
             }
         }
 
+        if showSlideNumber {
+            xml += slideNumberXML(number: slideIndex + 1, theme: theme, size: size)
+        }
+
         xml += "</p:spTree>"
         xml += "</p:cSld>"
+        xml += transitionXML(slide.transition)
         xml += "</p:sld>"
+        return xml
+    }
+
+    /// Map a transition name to a legacy `<p:transition>` element. Unknown
+    /// names fall back to a fade.
+    private static func transitionXML(_ name: String?) -> String {
+        guard let raw = name?.lowercased(), !raw.isEmpty else { return "" }
+        let inner: String
+        switch raw {
+        case "cut": inner = "<p:cut/>"
+        case "wipe": inner = "<p:wipe/>"
+        case "push": inner = "<p:push/>"
+        case "cover": inner = "<p:cover/>"
+        case "split": inner = "<p:split/>"
+        case "zoom": inner = "<p:zoom/>"
+        default: inner = "<p:fade/>"
+        }
+        return "<p:transition spd=\"med\">\(inner)</p:transition>"
+    }
+
+    /// A small bottom-right slide-number badge.
+    private static func slideNumberXML(number: Int, theme: PptxTheme, size: SlideSize) -> String {
+        let cx: Int64 = 700_000
+        let cy: Int64 = 350_000
+        let x = size.width - cx - 200_000
+        let y = size.height - cy - 120_000
+        let color = theme.textColor ?? "595959"
+        var xml = "<p:sp>"
+        xml += "<p:nvSpPr><p:cNvPr id=\"\(900 + number)\" name=\"SlideNumber\"/>"
+        xml += "<p:cNvSpPr/><p:nvPr/></p:nvSpPr>"
+        xml += "<p:spPr><a:xfrm><a:off x=\"\(x)\" y=\"\(y)\"/><a:ext cx=\"\(cx)\" cy=\"\(cy)\"/></a:xfrm>"
+        xml += "<a:prstGeom prst=\"rect\"><a:avLst/></a:prstGeom></p:spPr>"
+        xml += "<p:txBody><a:bodyPr/><a:lstStyle/>"
+        xml += "<a:p><a:pPr algn=\"r\"/><a:r><a:rPr lang=\"en-US\" sz=\"1100\"><a:solidFill>"
+        xml += "<a:srgbClr val=\"\(color)\"/></a:solidFill></a:rPr><a:t>\(number)</a:t></a:r></a:p>"
+        xml += "</p:txBody></p:sp>"
         return xml
     }
 

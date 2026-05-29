@@ -7,8 +7,8 @@ public struct LineChartRenderer: Sendable {
         data: ChartDataSet,
         xField: String,
         series: [ChartSeriesConfig],
-        xScale: LinearScale,
-        yScale: LinearScale,
+        xScale: any ChartScale,
+        yScale: any ChartScale,
         layout: PlotArea,
         theme: ChartTheme
     ) -> [DrawingCommand] {
