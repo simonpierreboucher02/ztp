@@ -1,0 +1,378 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>ZTP — Zyquo Tool Protocol · Documentation</title>
+<meta name="description" content="ZTP (Zyquo Tool Protocol) — a native macOS agent tool runtime in Swift: Excel, Docx, Slides, Chart, Mail, Message, Browser, macOS, OCR, Notes, Files, Finder." />
+<style>
+:root{
+  --bg:#0B0F14; --bg-panel:#0F141B; --bg-elev:#131A23; --fg:#D7DEE7; --fg-muted:#7A8693;
+  --border:#1F2A37; --border-bright:#2E4257; --accent:#5BA8FF; --accent-strong:#2F80ED;
+  --iris1:#5BA8FF; --iris2:#9D7CFF; --ok:#4ADE80; --warn:#F59E0B; --risk:#EF4444; --teal:#5EEAD4;
+  --kw:#9D7CFF; --str:#7DD3FC; --code-bg:#0a0e13;
+  --mono:"SF Mono",ui-monospace,"JetBrains Mono",Menlo,Consolas,monospace;
+  --sans:-apple-system,BlinkMacSystemFont,"Segoe UI",Inter,Roboto,Helvetica,Arial,sans-serif;
+}
+*{box-sizing:border-box}
+html{scroll-behavior:smooth}
+body{margin:0;background:var(--bg);color:var(--fg);font-family:var(--sans);line-height:1.65;font-size:16px}
+a{color:var(--accent);text-decoration:none}
+a:hover{color:var(--iris2)}
+.iris{background:linear-gradient(90deg,var(--iris1),var(--iris2));-webkit-background-clip:text;background-clip:text;color:transparent}
+.layout{display:flex;min-height:100vh}
+/* Sidebar */
+.sidebar{width:262px;flex:none;background:var(--bg-panel);border-right:1px solid var(--border);position:sticky;top:0;height:100vh;overflow-y:auto;padding:22px 16px}
+.brand{display:flex;align-items:center;gap:10px;font-weight:700;font-size:20px;margin:4px 8px 4px}
+.brand .dot{width:11px;height:11px;border-radius:3px;background:linear-gradient(135deg,var(--iris1),var(--iris2))}
+.tag{margin:2px 8px 18px;color:var(--fg-muted);font-size:12.5px}
+.nav h4{color:var(--fg-muted);font-size:11px;letter-spacing:.13em;text-transform:uppercase;margin:18px 8px 6px}
+.nav a{display:block;padding:6px 10px;border-radius:8px;color:var(--fg);font-size:14px}
+.nav a:hover{background:var(--bg-elev)}
+.nav a.active{background:linear-gradient(90deg,rgba(91,168,255,.16),rgba(157,124,255,.10));color:#fff;box-shadow:inset 2px 0 0 var(--accent)}
+/* Content */
+.content{flex:1;min-width:0;padding:0 0 80px}
+.hero{padding:64px 8vw 44px;border-bottom:1px solid var(--border);background:radial-gradient(1200px 400px at 20% -10%,rgba(91,168,255,.10),transparent),radial-gradient(900px 500px at 90% 0%,rgba(157,124,255,.08),transparent)}
+.hero h1{font-size:46px;margin:0 0 12px;letter-spacing:-.5px}
+.hero p.lead{font-size:19px;color:var(--fg-muted);max-width:760px;margin:0 0 22px}
+.badges{display:flex;flex-wrap:wrap;gap:8px;margin-top:10px}
+.badge{font-size:12px;padding:4px 10px;border-radius:999px;border:1px solid var(--border-bright);background:var(--bg-elev);color:var(--fg);font-family:var(--mono)}
+.badge.ok{border-color:#23502f;color:var(--ok)}
+.badge.iris{border-color:#3a3a6a;color:var(--iris2)}
+.section{padding:46px 8vw;border-bottom:1px solid var(--border);max-width:1100px}
+.section h2{font-size:30px;margin:0 0 6px;letter-spacing:-.3px}
+.section h3{font-size:20px;margin:30px 0 8px}
+.section h2 .anchor,.section h3 .anchor{opacity:0;margin-left:8px;font-size:.7em;color:var(--fg-muted)}
+.section h2:hover .anchor,.section h3:hover .anchor{opacity:1}
+.muted{color:var(--fg-muted)}
+code{font-family:var(--mono);font-size:.88em;background:var(--bg-elev);border:1px solid var(--border);border-radius:5px;padding:1px 6px;color:var(--teal)}
+pre{background:var(--code-bg);border:1px solid var(--border);border-radius:12px;padding:16px 18px;overflow-x:auto;margin:14px 0;font-family:var(--mono);font-size:13.5px;line-height:1.55}
+pre code{background:none;border:none;padding:0;color:var(--fg)}
+.tok-c{color:var(--fg-muted)} .tok-k{color:var(--kw)} .tok-s{color:var(--str)} .tok-f{color:#FBBF24}
+table{border-collapse:collapse;width:100%;margin:16px 0;font-size:14px}
+th,td{border:1px solid var(--border);padding:9px 12px;text-align:left;vertical-align:top}
+th{background:var(--bg-elev);color:#fff;font-weight:600}
+tr:nth-child(even) td{background:rgba(255,255,255,.012)}
+/* Tool cards */
+.tool{border:1px solid var(--border);border-radius:14px;background:var(--bg-panel);padding:20px 22px;margin:18px 0;position:relative;overflow:hidden}
+.tool::before{content:"";position:absolute;left:0;top:0;bottom:0;width:3px;background:linear-gradient(180deg,var(--iris1),var(--iris2))}
+.tool h3{margin:0 0 4px;font-size:19px}
+.tool .pill{display:inline-block;font-family:var(--mono);font-size:11px;color:var(--fg-muted);border:1px solid var(--border-bright);border-radius:999px;padding:2px 9px;margin:0 0 10px}
+.tool .cmds{font-family:var(--mono);font-size:12.5px;color:var(--teal);margin:2px 0 8px}
+.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(230px,1fr));gap:14px;margin:18px 0}
+.card{border:1px solid var(--border);border-radius:12px;background:var(--bg-panel);padding:16px 18px}
+.card h4{margin:0 0 6px;font-size:15px}
+.card p{margin:0;color:var(--fg-muted);font-size:13.5px}
+.callout{border:1px solid var(--border-bright);border-left:3px solid var(--accent);background:var(--bg-elev);border-radius:10px;padding:12px 16px;margin:16px 0;font-size:14px}
+.callout.warn{border-left-color:var(--warn)}
+footer{padding:30px 8vw;color:var(--fg-muted);font-size:13px}
+.topbar{display:none}
+@media(max-width:880px){
+  .sidebar{display:none}
+  .topbar{display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;z-index:10;background:var(--bg-panel);border-bottom:1px solid var(--border);padding:12px 18px;font-weight:700}
+  .hero{padding:40px 22px 30px}.hero h1{font-size:34px}.section{padding:34px 22px}
+}
+</style>
+</head>
+<body>
+<div class="topbar"><span class="iris">ZTP</span><a href="https://github.com/simonpierreboucher02/ztp">GitHub ↗</a></div>
+<div class="layout">
+  <aside class="sidebar">
+    <div class="brand"><span class="dot"></span><span>ZTP</span></div>
+    <div class="tag">Zyquo Tool Protocol · v0.9.0</div>
+    <nav class="nav">
+      <h4>Start</h4>
+      <a href="#overview">Overview</a>
+      <a href="#install">Install</a>
+      <a href="#quickstart">Quick start</a>
+      <a href="#protocol">Protocol commands</a>
+      <h4>Tools (12)</h4>
+      <a href="#excel">ztp-excel</a>
+      <a href="#docx">ztp-docx</a>
+      <a href="#slides">ztp-slides</a>
+      <a href="#chart">ztp-chart</a>
+      <a href="#mail">ztp-mail</a>
+      <a href="#message">ztp-message</a>
+      <a href="#browser">ztp-browser</a>
+      <a href="#macos">ztp-macos</a>
+      <a href="#ocr">ztp-ocr</a>
+      <a href="#notes">ztp-notes</a>
+      <a href="#files">ztp-files</a>
+      <a href="#finder">ztp-finder</a>
+      <h4>Reference</h4>
+      <a href="#architecture">Architecture</a>
+      <a href="#security">Security model</a>
+      <a href="#development">Development</a>
+    </nav>
+  </aside>
+
+  <main class="content">
+    <header class="hero">
+      <h1><span class="iris">ZTP</span> — Zyquo Tool Protocol</h1>
+      <p class="lead">A native macOS <strong>agent tool runtime</strong>, written in Swift. ZTP gives an AI agent twelve battle-tested, schema-validated tools — Office document generation, charting, email &amp; messaging, headless browsing, macOS automation, local OCR, Apple Notes, file management, and Finder control — behind one consistent protocol.</p>
+      <div class="badges">
+        <span class="badge">macOS 14+</span>
+        <span class="badge">Swift 6 · strict concurrency</span>
+        <span class="badge">arm64</span>
+        <span class="badge iris">12 tools</span>
+        <span class="badge ok">278 tests passing</span>
+        <span class="badge ok">notarized · Developer ID</span>
+        <span class="badge">Apache-2.0</span>
+      </div>
+    </header>
+
+    <section class="section" id="overview">
+      <h2>Overview <a class="anchor" href="#overview">#</a></h2>
+      <p>ZTP is the <strong>execution layer</strong> behind the <a href="https://github.com/simonpierreboucher02/zyquo">Zyquo</a> AI agent, but it ships as a standalone CLI you can use directly. Every tool conforms to one protocol — a typed <code>manifest</code> plus an <code>execute(input,&nbsp;context)</code> method — so the agent (or you) can discover, schema-validate, and invoke them uniformly.</p>
+      <div class="grid">
+        <div class="card"><h4>🧱 Native &amp; fast</h4><p>Pure Swift. OpenXML/OOXML written from scratch — no Python, no Node, no LibreOffice.</p></div>
+        <div class="card"><h4>🔐 Safe by default</h4><p>Mutating &amp; destructive ops are <code>--confirm</code>-gated; AppleScript is escaped and runs without a shell; the browser blocks SSRF hosts.</p></div>
+        <div class="card"><h4>🤝 Two interfaces</h4><p>Friendly per-tool subcommands <em>and</em> a generic protocol (<code>run/tools/schema/inspect/validate</code>) for agents.</p></div>
+        <div class="card"><h4>📦 Self-contained</h4><p>One signed, notarized universal binary. Optional system tools detected at runtime.</p></div>
+      </div>
+    </section>
+
+    <section class="section" id="install">
+      <h2>Install <a class="anchor" href="#install">#</a></h2>
+      <h3>Homebrew</h3>
+      <pre><code><span class="tok-c"># tap + formula</span>
+brew install simonpierreboucher02/ztp/ztp
+ztp version</code></pre>
+      <h3>From the notarized release</h3>
+      <pre><code>tar xzf ztp-0.9.0-macos-arm64.tar.gz
+sudo mv ztp /usr/local/bin/
+ztp --help</code></pre>
+      <h3>From source</h3>
+      <pre><code>git <span class="tok-k">clone</span> https://github.com/simonpierreboucher02/ztp.git
+<span class="tok-k">cd</span> ztp &amp;&amp; swift build -c release
+.build/release/ztp version</code></pre>
+      <p class="muted">Requirements: macOS 14+, Swift 6 toolchain (Xcode 16+).</p>
+    </section>
+
+    <section class="section" id="quickstart">
+      <h2>Quick start <a class="anchor" href="#quickstart">#</a></h2>
+      <pre><code><span class="tok-c"># Generate a spreadsheet from a JSON spec</span>
+ztp excel build report.json --output report.xlsx --json
+
+<span class="tok-c"># Extract text from a scanned PDF (local OCR, no network)</span>
+ztp ocr pdf invoice.pdf --pages 1-2 --output invoice.txt
+
+<span class="tok-c"># Search a tree by content, then zip the matches' folder</span>
+ztp files search --path ~/src --query <span class="tok-s">"TODO"</span> --content --ext swift --json
+ztp files compress --path ~/src --output ~/src.zip
+
+<span class="tok-c"># Drive Finder</span>
+ztp finder set-view --view column --path ~/Downloads</code></pre>
+    </section>
+
+    <section class="section" id="protocol">
+      <h2>Protocol commands <a class="anchor" href="#protocol">#</a></h2>
+      <p>Beyond the per-tool subcommands, ZTP exposes a generic protocol surface that agents use to discover and call any tool by name:</p>
+      <table>
+        <tr><th>Command</th><th>Purpose</th></tr>
+        <tr><td><code>ztp tools&nbsp;--json</code></td><td>List every built-in tool with its manifest.</td></tr>
+        <tr><td><code>ztp schema &lt;tool&gt;</code></td><td>Emit the JSON-schema-like input description (commands + params).</td></tr>
+        <tr><td><code>ztp inspect &lt;tool&gt;</code></td><td>Human-readable capabilities &amp; command reference.</td></tr>
+        <tr><td><code>ztp run &lt;tool&gt; &lt;input.json&gt;</code></td><td>Invoke a tool with a flat JSON object (<code>command</code> selects the op).</td></tr>
+        <tr><td><code>ztp validate &lt;tool&gt; &lt;input.json&gt;</code></td><td>Validate an input payload against the tool schema.</td></tr>
+      </table>
+      <div class="callout">Every tool returns a structured result: <code>{ ok, tool, duration_ms, data | error }</code>. Always check <code>ok</code> before chaining.</div>
+    </section>
+
+    <!-- ============ TOOLS ============ -->
+    <section class="section" id="tools-head" style="padding-bottom:8px">
+      <h2>The 12 tools <a class="anchor" href="#tools-head">#</a></h2>
+      <p class="muted">Document &amp; visual generators, communications, web, and system automation.</p>
+    </section>
+
+    <section class="section" id="excel" style="padding-top:24px">
+      <div class="tool">
+        <h3>📊 ztp-excel</h3>
+        <span class="pill">XLSX · OpenXML from scratch</span>
+        <div class="cmds">build · validate-spec · validate · inspect · import-csv</div>
+        <p>Generate fully-featured XLSX workbooks from JSON: multiple sheets, formulas, number formats &amp; styles, merged cells, column widths, frozen panes, data validation (dropdowns / numeric ranges), conditional formatting (data bars &amp; color scales), and cell comments.</p>
+        <pre><code>ztp excel build report.json --output report.xlsx --json
+ztp excel import-csv data.csv --output data.xlsx --infer-types
+ztp excel inspect report.xlsx --json</code></pre>
+      </div>
+    </section>
+
+    <section class="section" id="docx" style="padding-top:24px">
+      <div class="tool">
+        <h3>📝 ztp-docx</h3>
+        <span class="pill">DOCX · OpenXML from scratch</span>
+        <div class="cmds">build · validate-spec · validate · inspect</div>
+        <p>Word documents from JSON: headings, styled runs, paragraph alignment, tables with column widths, images, page breaks, horizontal rules, headers/footers (with page numbers), hyperlinks, and nested lists (levels 0–8).</p>
+        <pre><code>ztp docx build proposal.json --output proposal.docx --json</code></pre>
+      </div>
+    </section>
+
+    <section class="section" id="slides" style="padding-top:24px">
+      <div class="tool">
+        <h3>📑 ztp-slides</h3>
+        <span class="pill">PPTX · OpenXML from scratch</span>
+        <div class="cmds">build · validate-spec · validate · inspect</div>
+        <p>PowerPoint decks from JSON: titled slides, bullets, images, speaker notes (notesMaster + notesSlide), slide numbers, and per-slide transitions.</p>
+        <pre><code>ztp slides build deck.json --output deck.pptx --json</code></pre>
+      </div>
+    </section>
+
+    <section class="section" id="chart" style="padding-top:24px">
+      <div class="tool">
+        <h3>📈 ztp-chart</h3>
+        <span class="pill">PNG · SVG · PDF</span>
+        <div class="cmds">build · validate-spec · inspect · data-summary · themes</div>
+        <p>Render bar, line, scatter, pie, area, and histogram charts from data specs. Supports axis min/max, log scales, stacked bars, data labels, and built-in themes.</p>
+        <pre><code>ztp chart build sales.json --output sales.svg --format svg
+ztp chart themes</code></pre>
+      </div>
+    </section>
+
+    <section class="section" id="mail" style="padding-top:24px">
+      <div class="tool">
+        <h3>✉️ ztp-mail</h3>
+        <span class="pill">SMTP · Apple Mail · RFC 5322</span>
+        <div class="cmds">validate · preview · draft · send · apple-draft · inspect</div>
+        <p>Draft, preview, and send email. Markdown/HTML bodies, attachments, priority headers, custom headers (CRLF-injection-guarded), and inline images (multipart/related + Content-ID). <code>send</code> requires <code>--confirmed</code>.</p>
+        <pre><code>ztp mail preview message.json --output preview.html
+ztp mail draft message.json --output message.eml
+ztp mail send message.json --profile work --confirmed</code></pre>
+      </div>
+    </section>
+
+    <section class="section" id="message" style="padding-top:24px">
+      <div class="tool">
+        <h3>💬 ztp-message</h3>
+        <span class="pill">iMessage · SMS · AppleScript</span>
+        <div class="cmds">validate · preview · draft · send · apple-draft · templates · inspect</div>
+        <p>Draft and send iMessage/SMS via Messages.app. Validates recipients, warns on SMS segmentation, and ships message templates. <code>send</code> requires <code>--confirmed</code>; AppleScript is fully escaped.</p>
+        <pre><code>ztp message preview msg.json
+ztp message send msg.json --confirmed</code></pre>
+      </div>
+    </section>
+
+    <section class="section" id="browser" style="padding-top:24px">
+      <div class="tool">
+        <h3>🌐 ztp-browser</h3>
+        <span class="pill">WebKit headless · SSRF-guarded</span>
+        <div class="cmds">screenshot · pdf · html · text · links · metadata · inspect · open · run · safari-*</div>
+        <p>Headless web automation: full-page screenshots, PDF export, raw HTML, readable text, link &amp; metadata extraction. Custom HTTP headers, viewport control, per-strategy wait settle. Private/loopback/metadata hosts are blocked by default (SSRF).</p>
+        <p class="muted">The <code>url</code> is a positional argument: <code>ztp browser text &lt;url&gt;</code>.</p>
+        <pre><code>ztp browser text https://example.com --json
+ztp browser screenshot https://example.com --output shot.png --width 1440
+ztp browser pdf https://example.com --output page.pdf</code></pre>
+      </div>
+    </section>
+
+    <section class="section" id="macos" style="padding-top:24px">
+      <div class="tool">
+        <h3>🖥️ ztp-macos</h3>
+        <span class="pill">AppleScript · Process · Files · --confirm gating</span>
+        <div class="cmds">system-* · finder-* · files-* · clipboard-* · notify · screenshot-* · apps-* · windows-list · processes-* · applescript-* · shortcuts-* · permissions-check</div>
+        <p>Broad macOS system automation: hardware/OS info, Finder reveal/list, file read/write/copy/move/delete, clipboard, notifications, screen capture, app launch/quit, window &amp; process inspection, AppleScript, Shortcuts, and a permissions diagnostic.</p>
+        <pre><code>ztp macos system-info --json
+ztp macos files-write /tmp/out.txt --content <span class="tok-s">"hello"</span> --confirm
+ztp macos screenshot-full --output screen.png</code></pre>
+      </div>
+    </section>
+
+    <section class="section" id="ocr" style="padding-top:24px">
+      <div class="tool">
+        <h3>🔎 ztp-ocr <span class="badge ok" style="font-size:11px">new in 0.9.0</span></h3>
+        <span class="pill">Apple Vision · PDFKit · on-device · no network</span>
+        <div class="cmds">image · pdf · screen · languages</div>
+        <p>Local, on-device OCR. Recognize text in images, rasterize &amp; OCR scanned PDFs (page ranges + DPI), or capture and read the screen. Returns full text plus per-line confidence and bounding boxes; <code>--languages en,fr</code> constrains recognition and <code>--fast</code> trades accuracy for speed.</p>
+        <pre><code>ztp ocr image scan.png --json
+ztp ocr pdf invoice.pdf --pages 1-2 --dpi 200 --output invoice.txt
+ztp ocr screen --json
+ztp ocr languages</code></pre>
+      </div>
+    </section>
+
+    <section class="section" id="notes" style="padding-top:24px">
+      <div class="tool">
+        <h3>🗒️ ztp-notes <span class="badge ok" style="font-size:11px">new in 0.9.0</span></h3>
+        <span class="pill">Apple Notes · AppleScript · --confirm gating</span>
+        <div class="cmds">list · read · create · append · delete · folders</div>
+        <p>Read and write Apple Notes, including structured note creation (title becomes the first line; body accepts plain text or HTML). <code>read</code> returns both raw HTML and a plain-text reduction. <code>delete</code> (to Recently Deleted) requires <code>--confirm</code>.</p>
+        <pre><code>ztp notes create --title <span class="tok-s">"Standup"</span> --body <span class="tok-s">"- shipped OCR\n- next: finder"</span> --json
+ztp notes append --name <span class="tok-s">"Standup"</span> --body <span class="tok-s">"- reviewed PRs"</span>
+ztp notes read --name <span class="tok-s">"Standup"</span> --json</code></pre>
+      </div>
+    </section>
+
+    <section class="section" id="files" style="padding-top:24px">
+      <div class="tool">
+        <h3>🗂️ ztp-files <span class="badge ok" style="font-size:11px">new in 0.9.0</span></h3>
+        <span class="pill">FileManager · ditto · no shell · Trash-safe</span>
+        <div class="cmds">list · tree · search · info · copy · move · rename · mkdir · delete · compress · extract</div>
+        <p>Filesystem navigation, search, mutation and (de)compression. <code>search</code> matches by name or, with <code>--content</code>, greps file contents (supports <code>--regex</code> and <code>--ext</code>). <code>delete</code> moves to the Trash by default (<code>--permanent</code> to remove outright). Zip via <code>/usr/bin/ditto</code> — no shell. <code>move</code>/<code>rename</code>/<code>delete</code>/<code>extract</code> require <code>--confirm</code>.</p>
+        <pre><code>ztp files list --path ~/Documents --sort date --json
+ztp files search --path ~/src --query <span class="tok-s">"TODO"</span> --content --ext swift --json
+ztp files compress --path ~/Project --output ~/project.zip
+ztp files delete --path ~/old.txt --confirm</code></pre>
+      </div>
+    </section>
+
+    <section class="section" id="finder" style="padding-top:24px">
+      <div class="tool">
+        <h3>🪟 ztp-finder <span class="badge ok" style="font-size:11px">new in 0.9.0</span></h3>
+        <span class="pill">Finder · AppleScript · --confirm gating</span>
+        <div class="cmds">selection · reveal · open · new-window · set-view · info · trash · empty-trash · eject</div>
+        <p>Advanced Finder control. <code>selection</code> returns the POSIX paths of the currently selected items; <code>set-view</code> switches the front window between icon / list / column / gallery. <code>trash</code>, <code>empty-trash</code> and <code>eject</code> require <code>--confirm</code>.</p>
+        <pre><code>ztp finder selection --json
+ztp finder set-view --view column --path ~/Downloads
+ztp finder reveal --path ~/report.pdf
+ztp finder eject --name <span class="tok-s">"Backup"</span> --confirm</code></pre>
+      </div>
+    </section>
+
+    <section class="section" id="architecture">
+      <h2>Architecture <a class="anchor" href="#architecture">#</a></h2>
+      <pre><code>ztp (ZTPCLI)
+├── ZTPProtocols     ZTPTool, ToolManifest, ToolInput/Result, JSONValue
+├── ZTPCore          ToolRegistry, ZTPRuntime (actor), EventBus, Logger
+├── ZTPExcel  ZTPDocx  ZTPSlides  ZTPChart      ← document &amp; visual generators
+├── ZTPMail   ZTPMessage  ZTPBrowser  ZTPMacOS  ← comms, web &amp; system
+└── ZTPOCR    ZTPNotes    ZTPFiles    ZTPFinder ← OCR, Apple Notes, files &amp; Finder</code></pre>
+      <p>Each generator owns its <strong>Schema → Model → OpenXML/render → package</strong> pipeline with a dedicated validator. The CLI exposes both per-tool subcommands and the generic protocol commands.</p>
+    </section>
+
+    <section class="section" id="security">
+      <h2>Security model <a class="anchor" href="#security">#</a></h2>
+      <ul>
+        <li><strong>Confirmation gating</strong> — every mutating/destructive operation (send, write, move, delete, trash, eject…) requires an explicit <code>--confirm</code>/<code>--confirmed</code> flag.</li>
+        <li><strong>AppleScript safety</strong> — all interpolated values are escaped (quote, backslash, newline, tab) and <code>osascript</code> runs through <code>Process</code> argument arrays, never a shell string.</li>
+        <li><strong>SSRF guard</strong> — the browser blocks private, loopback, and cloud-metadata hosts by default.</li>
+        <li><strong>No shell for archives</strong> — compression uses <code>/usr/bin/ditto</code> via argument arrays.</li>
+        <li><strong>On-device OCR</strong> — Vision runs locally; no image or text leaves the machine.</li>
+      </ul>
+      <div class="callout warn">Confirmation is consent: ZTP does not second-guess a caller who explicitly passes <code>--confirm</code> on a destructive action.</div>
+    </section>
+
+    <section class="section" id="development">
+      <h2>Development <a class="anchor" href="#development">#</a></h2>
+      <pre><code>swift build            <span class="tok-c"># debug build</span>
+swift test             <span class="tok-c"># 278 tests across 62 suites</span>
+swift build -c release <span class="tok-c"># optimized binary</span></code></pre>
+      <p>Source: <a href="https://github.com/simonpierreboucher02/ztp">github.com/simonpierreboucher02/ztp</a> · License: Apache-2.0.</p>
+    </section>
+
+    <footer>
+      ZTP — Zyquo Tool Protocol · v0.9.0 · Built Swift-native for macOS by Simon-Pierre Boucher.
+      <br/>Companion agent: <a href="https://github.com/simonpierreboucher02/zyquo">Zyquo</a>.
+    </footer>
+  </main>
+</div>
+
+<script>
+// Active nav highlight on scroll
+const links=[...document.querySelectorAll('.nav a')];
+const map=new Map(links.map(a=>[a.getAttribute('href').slice(1),a]));
+const obs=new IntersectionObserver((es)=>{
+  es.forEach(e=>{if(e.isIntersecting){links.forEach(l=>l.classList.remove('active'));const a=map.get(e.target.id);if(a)a.classList.add('active');}});
+},{rootMargin:'-45% 0px -50% 0px'});
+document.querySelectorAll('section[id]').forEach(s=>obs.observe(s));
+</script>
+</body>
+</html>
